@@ -1,0 +1,20 @@
+version: "3.9"
+
+# Optional: local dev currently runs against a Homebrew-installed Postgres
+# (see README). This compose file is provided for parity / production-like
+# setups where Docker is available.
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: apple
+      POSTGRES_PASSWORD: localdev
+      POSTGRES_DB: clickup_clone
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
