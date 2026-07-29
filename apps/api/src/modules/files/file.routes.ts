@@ -20,4 +20,7 @@ fileRouter.post(
   upload.single("file"),
   asyncHandler(controller.uploadFile),
 );
+// Access is decided per file — by its list if it has one, otherwise by
+// workspace membership — so there is no route-level role guard here.
+fileRouter.get("/files/:id/download", asyncHandler(controller.downloadFile));
 fileRouter.delete("/files/:id", authenticate, asyncHandler(controller.deleteFile));

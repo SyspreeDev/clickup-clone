@@ -8,7 +8,8 @@ import { Upload, FileText, Trash2, Download } from "lucide-react";
 import { TopNav } from "@/components/layout/top-nav";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { listFiles, uploadFile, deleteFile, fileDownloadUrl } from "@/lib/queries/files";
+import { listFiles, uploadFile, deleteFile, downloadFile, type FileItem } from "@/lib/queries/files";
+import { ApiError } from "@/lib/api-client";
 
 function formatSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
@@ -33,6 +34,11 @@ export default function FilesPage({ params }: { params: Promise<{ workspaceId: s
       toast.success("File uploaded");
     },
     onError: () => toast.error("Upload failed"),
+  });
+
+  const downloadMutation = useMutation({
+    mutationFn: (file: FileItem) => downloadFile(file.id, file.name),
+    onError: (err) => toast.error(err instanceof ApiError ? err.message : "Could not download file"),
   });
 
   const deleteMutation = useMutation({
@@ -97,11 +103,14 @@ export default function FilesPage({ params }: { params: Promise<{ workspaceId: s
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
-                  <a href={fileDownloadUrl(file)} download target="_blank" rel="noreferrer">
-                    <Button variant="ghost" size="icon">
-                      <Download className="h-4 w-4" />
-                    </Button>
-                  </a>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => downloadMutation.mutate(file)}
+                    aria-label={`Download ${file.name}`}
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
                   <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(file.id)}>
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>

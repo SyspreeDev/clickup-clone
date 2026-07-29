@@ -1,4 +1,5 @@
 import { prisma } from "../../lib/prisma";
+import { storageProvider } from "../../lib/storage";
 import { NotFoundError, BadRequestError } from "../../lib/errors";
 import { logActivity } from "../../lib/activity";
 import { createNotification } from "../notifications/notification.service";
@@ -70,10 +71,81 @@ export async function getTask(taskId: string) {
         orderBy: { createdAt: "asc" },
       },
       timeEntries: { include: { user: { select: { id: true, name: true, avatarUrl: true } } }, orderBy: { startedAt: "desc" } },
+      attachments: {
+        include: { uploadedBy: { select: { id: true, name: true, avatarUrl: true } } },
+        orderBy: { createdAt: "desc" },
+      },
     },
   });
   if (!task) throw new NotFoundError("Task not found");
   return task;
+}
+
+/**
+ * Files dropped on a task are stored twice over: as an Attachment on the task,
+ * and as a File carrying the list's projectId — so the same upload also shows up
+ * under that client in the workspace Files area, which is the whole point of
+ * organising uploads per client.
+ */
+export async function addAttachment(
+  taskId: string,
+  uploaderId: string,
+  file: { originalname: string; buffer: Buffer; size: number; mimetype: string },
+) {
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    select: { projectId: true, title: true, project: { select: { workspaceId: true } } },
+  });
+  if (!task) throw new NotFoundError("Task not found");
+
+  const stored = await storageProvider.save(file.originalname, file.buffer);
+
+  const record = await prisma.file.create({
+    data: {
+      workspaceId: task.project.workspaceId,
+      projectId: task.projectId,
+      name: file.originalname,
+      url: stored.url,
+      size: file.size,
+      mimeType: file.mimetype,
+      uploadedById: uploaderId,
+    },
+  });
+
+  const attachment = await prisma.attachment.create({
+    data: {
+      taskId,
+      fileId: record.id,
+      fileName: file.originalname,
+      fileUrl: stored.url,
+      fileSize: file.size,
+      mimeType: file.mimetype,
+      uploadedById: uploaderId,
+    },
+    include: { uploadedBy: { select: { id: true, name: true, avatarUrl: true } } },
+  });
+
+  await logActivity({
+    workspaceId: task.project.workspaceId,
+    projectId: task.projectId,
+    taskId,
+    actorId: uploaderId,
+    action: "ATTACHMENT_ADDED",
+    entityType: "Attachment",
+    entityId: attachment.id,
+    metadata: { fileName: file.originalname },
+  });
+
+  return attachment;
+}
+
+export async function deleteAttachment(id: string) {
+  const attachment = await prisma.attachment.findUnique({ where: { id }, select: { fileId: true } });
+  if (!attachment) throw new NotFoundError("Attachment not found");
+
+  await prisma.attachment.delete({ where: { id } });
+  // The File row exists only to surface this upload under the client, so it goes too.
+  if (attachment.fileId) await prisma.file.delete({ where: { id: attachment.fileId } }).catch(() => {});
 }
 
 export async function createTask(projectId: string, creatorId: string, input: CreateTaskInput) {

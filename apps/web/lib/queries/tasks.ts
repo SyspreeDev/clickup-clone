@@ -1,5 +1,17 @@
-import { api } from "@/lib/api-client";
+import { api, apiUpload } from "@/lib/api-client";
 import type { CreateTaskInput, UpdateTaskInput, MoveTaskInput, CreateCommentInput } from "@repo/shared-types";
+
+export interface Attachment {
+  id: string;
+  taskId: string | null;
+  fileId: string | null;
+  fileName: string;
+  fileUrl: string;
+  fileSize: number;
+  mimeType: string;
+  createdAt: string;
+  uploadedBy: { id: string; name: string; avatarUrl: string | null };
+}
 
 export interface TaskSummary {
   id: string;
@@ -57,6 +69,7 @@ export interface TaskDetail extends TaskSummary {
     durationMinutes: number | null;
     user: { id: string; name: string; avatarUrl: string | null };
   }>;
+  attachments: Attachment[];
 }
 
 export const listTasks = (projectId: string, filters?: Record<string, string>) => {
@@ -81,6 +94,15 @@ export const addChecklistItem = (checklistId: string, title: string) =>
 export const updateChecklistItem = (id: string, input: { isCompleted?: boolean; title?: string }) =>
   api.patch(`/api/checklist-items/${id}`, input);
 export const deleteChecklistItem = (id: string) => api.delete(`/api/checklist-items/${id}`);
+
+export function uploadAttachment(taskId: string, file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiUpload<Attachment>(`/api/tasks/${taskId}/attachments`, formData);
+}
+export const deleteAttachment = (id: string) => api.delete<void>(`/api/attachments/${id}`);
+// To fetch the bytes, use downloadFile(attachment.fileId, …) from queries/files —
+// stored URLs are not publicly served.
 
 export const createComment = (taskId: string, input: CreateCommentInput) => api.post(`/api/tasks/${taskId}/comments`, input);
 

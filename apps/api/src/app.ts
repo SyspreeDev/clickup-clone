@@ -2,7 +2,6 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import passport from "passport";
-import path from "node:path";
 import { env } from "./config/env";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import { configureGoogleStrategy } from "./modules/auth/passport-google.strategy";
@@ -28,7 +27,9 @@ app.use(cors({ origin: env.corsAllowAll ? true : env.corsOrigin, credentials: tr
 app.use(express.json({ limit: "5mb" }));
 app.use(cookieParser());
 app.use(passport.initialize());
-app.use("/uploads", express.static(path.resolve(process.cwd(), env.uploadDir)));
+// Uploads are deliberately not served statically. Every document leaves through
+// GET /api/files/:id/download, which checks the caller against the list the file
+// belongs to — see readFileForUser in modules/files/file.service.ts.
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", time: new Date().toISOString() });

@@ -151,7 +151,7 @@ export function ContainerOverview({
                     <tr key={list.id} className="border-b border-border transition-colors hover:bg-muted/40">
                       <td className="px-4 py-2.5">
                         <Link
-                          href={`${base}/projects/${list.id}/board`}
+                          href={`${base}/projects/${list.id}/list`}
                           className="flex items-center gap-2 font-medium hover:text-primary"
                         >
                           <ListChecks className="h-3.5 w-3.5 shrink-0" style={{ color: list.color ?? undefined }} />

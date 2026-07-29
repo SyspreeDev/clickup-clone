@@ -1,4 +1,5 @@
 import { Router } from "express";
+import multer from "multer";
 import {
   createTaskSchema,
   updateTaskSchema,
@@ -22,8 +23,13 @@ import {
   viaChecklistItem,
   viaTimeEntry,
   viaDependency,
+  viaAttachment,
 } from "./task.middleware";
 import * as controller from "./task.controller";
+
+// Same 25MB ceiling as the workspace Files uploader. Note the Vercel proxy in
+// front of production caps request bodies lower (~4.5MB).
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
 
 export const taskRouter: Router = Router();
 taskRouter.use(authenticate);
@@ -57,6 +63,18 @@ taskRouter.post("/tasks/:taskId/assignees", requireTaskProjectAccess("MEMBER"), 
 taskRouter.delete("/tasks/:taskId/assignees/:userId", requireTaskProjectAccess("MEMBER"), asyncHandler(controller.removeAssignee));
 taskRouter.post("/tasks/:taskId/labels/:labelId", requireTaskProjectAccess("MEMBER"), asyncHandler(controller.addLabel));
 taskRouter.delete("/tasks/:taskId/labels/:labelId", requireTaskProjectAccess("MEMBER"), asyncHandler(controller.removeLabel));
+
+taskRouter.post(
+  "/tasks/:taskId/attachments",
+  requireTaskProjectAccess("MEMBER"),
+  upload.single("file"),
+  asyncHandler(controller.addAttachment),
+);
+taskRouter.delete(
+  "/attachments/:id",
+  requireTaskAccessVia(viaAttachment, "MEMBER"),
+  asyncHandler(controller.deleteAttachment),
+);
 
 taskRouter.get("/tasks/:taskId/subtasks", requireTaskProjectAccess("GUEST"), asyncHandler(controller.listSubtasks));
 taskRouter.post(

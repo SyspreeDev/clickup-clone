@@ -1,5 +1,4 @@
-import { api, API_URL } from "@/lib/api-client";
-import { useAuthStore } from "@/stores/auth-store";
+import { api, apiUpload, apiDownload } from "@/lib/api-client";
 
 export interface FileItem {
   id: string;
@@ -17,20 +16,22 @@ export interface FileItem {
 export const listFiles = (workspaceId: string) => api.get<FileItem[]>(`/api/workspaces/${workspaceId}/files`);
 export const deleteFile = (id: string) => api.delete<void>(`/api/files/${id}`);
 
-export async function uploadFile(workspaceId: string, file: File) {
+export function uploadFile(workspaceId: string, file: File) {
   const formData = new FormData();
   formData.append("file", file);
-  const accessToken = useAuthStore.getState().accessToken;
-  const res = await fetch(`${API_URL}/api/workspaces/${workspaceId}/files`, {
-    method: "POST",
-    credentials: "include",
-    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
-    body: formData,
-  });
-  if (!res.ok) throw new Error("Upload failed");
-  return res.json() as Promise<FileItem>;
+  return apiUpload<FileItem>(`/api/workspaces/${workspaceId}/files`, formData);
 }
 
-export function fileDownloadUrl(file: FileItem) {
-  return `${API_URL}${file.url}`;
+/**
+ * Downloads go through the authorized API route, so they need the bearer token —
+ * which a plain <a href> can't send. Fetch it, then hand the browser a blob.
+ */
+export async function downloadFile(fileId: string, fileName: string) {
+  const blob = await apiDownload(`/api/files/${fileId}/download`);
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  link.click();
+  URL.revokeObjectURL(url);
 }

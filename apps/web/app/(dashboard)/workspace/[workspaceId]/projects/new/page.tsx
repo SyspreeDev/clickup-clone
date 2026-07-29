@@ -55,7 +55,7 @@ export default function NewProjectPage({ params }: { params: Promise<{ workspace
     mutationFn: (input: CreateProjectInput) => createProject(workspaceId, input),
     onSuccess: (project) => {
       toast.success(`${project.name} created`);
-      router.push(`/workspace/${workspaceId}/projects/${project.id}/board`);
+      router.push(`/workspace/${workspaceId}/projects/${project.id}/list`);
     },
     onError: (err) => toast.error(err instanceof ApiError ? err.message : "Something went wrong"),
   });

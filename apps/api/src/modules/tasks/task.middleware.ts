@@ -41,4 +41,5 @@ export const viaChecklistItem = async (id: string) => {
   return item?.checklist.taskId ?? null;
 };
 export const viaTimeEntry = async (id: string) => (await prisma.timeEntry.findUnique({ where: { id } }))?.taskId ?? null;
+export const viaAttachment = async (id: string) => (await prisma.attachment.findUnique({ where: { id } }))?.taskId ?? null;
 export const viaDependency = async (id: string) => (await prisma.taskDependency.findUnique({ where: { id } }))?.taskId ?? null;

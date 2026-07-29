@@ -74,7 +74,7 @@ export function NewListDialog({
       queryClient.invalidateQueries({ queryKey: ["overview"] });
       toast.success(`List "${list.name}" created`);
       setOpen(false);
-      router.push(`/workspace/${workspaceId}/projects/${list.id}/board`);
+      router.push(`/workspace/${workspaceId}/projects/${list.id}/list`);
     },
     onError: (err) =>
       toast.error(err instanceof ApiError ? err.message : "Could not create the list"),

@@ -1,6 +1,7 @@
 import { prisma } from "../../lib/prisma";
 import { storageProvider } from "../../lib/storage";
-import { NotFoundError } from "../../lib/errors";
+import { resolveProjectRole } from "../../lib/access";
+import { ForbiddenError, NotFoundError } from "../../lib/errors";
 
 export async function listFolders(workspaceId: string, parentId: string | null) {
   return prisma.folder.findMany({
@@ -48,4 +49,35 @@ export async function deleteFile(id: string) {
   const file = await prisma.file.findUnique({ where: { id } });
   if (!file) throw new NotFoundError("File not found");
   await prisma.file.delete({ where: { id } });
+}
+
+/**
+ * Serves a stored file only to someone entitled to see it. Uploads were
+ * previously exposed by a bare express.static mount, which left every client's
+ * documents readable by anyone holding the URL — no use at all alongside
+ * team-scoped lists and single-list client guests.
+ */
+export async function readFileForUser(id: string, userId: string) {
+  const file = await prisma.file.findUnique({
+    where: { id },
+    select: { name: true, url: true, mimeType: true, workspaceId: true, projectId: true },
+  });
+  if (!file) throw new NotFoundError("File not found");
+
+  if (file.projectId) {
+    // Filed against a client's list, so that list's own rules decide.
+    const role = await resolveProjectRole(userId, file.projectId);
+    if (!role) throw new ForbiddenError("You do not have access to this file");
+  } else {
+    const membership = await prisma.workspaceMember.findUnique({
+      where: { workspaceId_userId: { workspaceId: file.workspaceId, userId } },
+      select: { status: true },
+    });
+    if (!membership || membership.status !== "ACTIVE") {
+      throw new ForbiddenError("You do not have access to this file");
+    }
+  }
+
+  const key = file.url.replace(/^\/uploads\//, "");
+  return { ...file, buffer: await storageProvider.read(key) };
 }

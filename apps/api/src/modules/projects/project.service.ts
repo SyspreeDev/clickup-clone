@@ -10,11 +10,24 @@ import type {
   UpdateWorkflowStateInput,
 } from "@repo/shared-types";
 
-const DEFAULT_WORKFLOW_STATES: Array<{ name: string; category: CreateWorkflowStateInput["category"]; color: string }> = [
-  { name: "Backlog", category: "BACKLOG", color: "#94a3b8" },
-  { name: "To Do", category: "UNSTARTED", color: "#64748b" },
-  { name: "In Progress", category: "STARTED", color: "#3b82f6" },
-  { name: "Done", category: "COMPLETED", color: "#22c55e" },
+/**
+ * The SySpree delivery pipeline, as used in the team's ClickUp. Every new list
+ * starts with these; each list can then edit its own set (an SEO list would
+ * rename "In Progress / Web Dev", for instance).
+ *
+ * Only CLOSED sits in a completed category, so progress bars and reports treat
+ * everything up to and including In Review as still open work.
+ */
+export const DEFAULT_WORKFLOW_STATES: Array<{
+  name: string;
+  category: CreateWorkflowStateInput["category"];
+  color: string;
+}> = [
+  { name: "Open", category: "UNSTARTED", color: "#87909e" },
+  { name: "Design (Figma)", category: "STARTED", color: "#14b8a6" },
+  { name: "In Progress / Web Dev", category: "STARTED", color: "#3b82f6" },
+  { name: "In Review", category: "STARTED", color: "#f59e0b" },
+  { name: "Closed", category: "COMPLETED", color: "#22c55e" },
 ];
 
 export async function createProject(workspaceId: string, creatorId: string, input: CreateProjectInput) {
@@ -35,7 +48,7 @@ export async function createProject(workspaceId: string, creatorId: string, inpu
       createdById: creatorId,
       members: { create: { userId: creatorId, role: "OWNER" } },
       workflowStates: {
-        create: DEFAULT_WORKFLOW_STATES.map((s, i) => ({ ...s, position: i, isDefault: i === 1 })),
+        create: DEFAULT_WORKFLOW_STATES.map((s, i) => ({ ...s, position: i, isDefault: i === 0 })),
       },
     },
     include: { workflowStates: { orderBy: { position: "asc" } } },

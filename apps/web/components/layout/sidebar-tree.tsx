@@ -25,7 +25,7 @@ function ListRow({
 
   return (
     <Link
-      href={`${base}/projects/${list.id}/board`}
+      href={`${base}/projects/${list.id}/list`}
       onClick={onNavigate}
       style={{ paddingLeft: `${depth * 12 + 10}px` }}
       className={cn(

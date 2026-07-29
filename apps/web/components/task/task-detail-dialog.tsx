@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -16,19 +16,36 @@ import { PriorityIcon, priorityLabel, PRIORITY_CONFIG } from "@/components/task/
 import { ChecklistSection } from "@/components/task/checklist-section";
 import { CommentSection } from "@/components/task/comment-section";
 import { AssigneePicker } from "@/components/task/assignee-picker";
+import { AttachmentSection } from "@/components/task/attachment-section";
 import { StatusPicker } from "@/components/task/status-picker";
+import { TagPicker } from "@/components/task/tag-picker";
 import { useTaskDetailStore } from "@/stores/task-detail-store";
 import { getTask, updateTask, deleteTask } from "@/lib/queries/tasks";
 import { listWorkflowStates } from "@/lib/queries/projects";
 import { ApiError } from "@/lib/api-client";
 import { TASK_PRIORITIES } from "@repo/shared-types";
 
+/** Shows the shape the team already uses for a client brief, without forcing it. */
+const DESCRIPTION_PLACEHOLDER = `Client Name -
+Client Email -
+
+Sales person -
+Package -
+SOW -
+
+Phase 1
+Phase 2`;
+
 export function TaskDetailDialog() {
   const openTaskId = useTaskDetailStore((s) => s.openTaskId);
   const close = useTaskDetailStore((s) => s.close);
   const queryClient = useQueryClient();
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  /**
+   * Local edits to the title and description, tagged with the task they belong
+   * to. Tagging them means opening a different client shows that client's text
+   * without an effect copying server state into state on every refetch.
+   */
+  const [draft, setDraft] = useState<{ taskId: string; title: string; description: string } | null>(null);
 
   const { data: task } = useQuery({
     queryKey: ["task", openTaskId],
@@ -43,12 +60,16 @@ export function TaskDetailDialog() {
     enabled: !!task?.projectId,
   });
 
-  useEffect(() => {
-    if (task) {
-      setTitle(task.title);
-      setDescription(typeof task.description === "string" ? task.description : "");
-    }
-  }, [task]);
+  const originalTitle = task?.title ?? "";
+  const originalDescription = typeof task?.description === "string" ? task.description : "";
+  const editing = draft?.taskId === openTaskId ? draft : null;
+  const title = editing?.title ?? originalTitle;
+  const description = editing?.description ?? originalDescription;
+
+  const setTitle = (next: string) =>
+    setDraft({ taskId: openTaskId!, title: next, description });
+  const setDescription = (next: string) =>
+    setDraft({ taskId: openTaskId!, title, description: next });
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["task", openTaskId] });
@@ -90,19 +111,21 @@ export function TaskDetailDialog() {
               <textarea
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                onBlur={() => title.trim() && title !== task.title && updateMutation.mutate({ title })}
+                onBlur={() => title.trim() && title !== originalTitle && updateMutation.mutate({ title })}
                 rows={1}
                 className="mb-4 resize-none overflow-hidden bg-transparent text-xl font-semibold leading-snug outline-none"
               />
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                onBlur={() => updateMutation.mutate({ description })}
-                placeholder="Add a description…"
-                rows={4}
-                className="mb-6 resize-none rounded-lg border border-transparent bg-transparent p-2 text-sm outline-none transition-colors hover:border-border focus:border-border"
+                onBlur={() => description !== originalDescription && updateMutation.mutate({ description })}
+                placeholder={DESCRIPTION_PLACEHOLDER}
+                rows={10}
+                className="mb-6 min-h-[200px] resize-y whitespace-pre-wrap rounded-lg border border-transparent bg-transparent p-2 text-sm leading-relaxed outline-none transition-colors hover:border-border focus:border-border"
               />
 
+              <AttachmentSection task={task} onChange={invalidate} />
+              <Separator className="my-4" />
               <ChecklistSection task={task} onChange={invalidate} />
               <Separator className="my-4" />
               <CommentSection task={task} />
@@ -146,12 +169,53 @@ export function TaskDetailDialog() {
                 <AssigneePicker task={task} />
               </Field>
 
-              <Field label="Due date">
+              <Field label="Dates">
+                <div className="space-y-1.5">
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="w-10 shrink-0">Start</span>
+                    <Input
+                      type="date"
+                      className="h-8"
+                      value={task.startDate ? format(new Date(task.startDate), "yyyy-MM-dd") : ""}
+                      onChange={(e) =>
+                        updateMutation.mutate({ startDate: e.target.value ? new Date(e.target.value) : null })
+                      }
+                    />
+                  </label>
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="w-10 shrink-0">Due</span>
+                    <Input
+                      type="date"
+                      className="h-8"
+                      value={task.dueDate ? format(new Date(task.dueDate), "yyyy-MM-dd") : ""}
+                      onChange={(e) =>
+                        updateMutation.mutate({ dueDate: e.target.value ? new Date(e.target.value) : null })
+                      }
+                    />
+                  </label>
+                </div>
+              </Field>
+
+              <Field label="Tags">
+                <TagPicker task={task} />
+              </Field>
+
+              <Field label="Time estimate">
                 <Input
-                  type="date"
+                  type="number"
+                  min={0}
+                  step={30}
+                  placeholder="Minutes"
                   className="h-8"
-                  value={task.dueDate ? format(new Date(task.dueDate), "yyyy-MM-dd") : ""}
-                  onChange={(e) => updateMutation.mutate({ dueDate: e.target.value ? new Date(e.target.value) : null })}
+                  defaultValue={task.estimateMinutes ?? ""}
+                  onBlur={(e) => {
+                    const raw = e.target.value.trim();
+                    const next = raw === "" ? null : Math.max(0, Math.round(Number(raw)));
+                    if (next !== task.estimateMinutes && !Number.isNaN(next as number)) {
+                      // The schema rejects 0, so an explicit zero means "clear it".
+                      updateMutation.mutate({ estimateMinutes: next === 0 ? null : next });
+                    }
+                  }}
                 />
               </Field>
 

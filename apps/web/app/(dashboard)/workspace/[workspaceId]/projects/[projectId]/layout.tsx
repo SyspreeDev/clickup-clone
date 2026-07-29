@@ -11,9 +11,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatusManager } from "@/components/project/status-manager";
 import { useAuthStore } from "@/stores/auth-store";
 
+// List first — it's the default view, and the one the team actually works in.
 const VIEWS = [
-  { key: "board", label: "Board", icon: Kanban },
   { key: "list", label: "List", icon: List },
+  { key: "board", label: "Board", icon: Kanban },
   { key: "table", label: "Table", icon: Table2 },
   { key: "calendar", label: "Calendar", icon: CalendarDays },
   { key: "timeline", label: "Timeline", icon: GanttChartSquare },

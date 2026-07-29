@@ -69,7 +69,7 @@ export function CommandPalette({ workspaceId }: { workspaceId: string }) {
             {query.length >= 2 && !!results?.tasks.length && (
               <Command.Group heading="Tasks">
                 {results.tasks.map((t) => (
-                  <Item key={t.id} icon={CheckSquare} onSelect={() => go(`${base}/projects/${t.project.id}/board`)}>
+                  <Item key={t.id} icon={CheckSquare} onSelect={() => go(`${base}/projects/${t.project.id}/list`)}>
                     {t.title}
                     <span className="ml-auto text-xs text-muted-foreground">
                       {t.project.key}-{t.number}
@@ -82,7 +82,7 @@ export function CommandPalette({ workspaceId }: { workspaceId: string }) {
             {query.length >= 2 && !!results?.projects.length && (
               <Command.Group heading="Projects">
                 {results.projects.map((p) => (
-                  <Item key={p.id} icon={FolderKanban} onSelect={() => go(`${base}/projects/${p.id}/board`)}>
+                  <Item key={p.id} icon={FolderKanban} onSelect={() => go(`${base}/projects/${p.id}/list`)}>
                     {p.name}
                     <span className="ml-auto text-xs text-muted-foreground">{p.key}</span>
                   </Item>
@@ -132,7 +132,7 @@ export function CommandPalette({ workspaceId }: { workspaceId: string }) {
             {query.length < 2 && !!projects?.length && (
               <Command.Group heading="Projects">
                 {projects.map((p) => (
-                  <Item key={p.id} icon={FolderKanban} onSelect={() => go(`${base}/projects/${p.id}/board`)}>
+                  <Item key={p.id} icon={FolderKanban} onSelect={() => go(`${base}/projects/${p.id}/list`)}>
                     {p.name}
                     <span className="ml-auto text-xs text-muted-foreground">{p.key}</span>
                   </Item>

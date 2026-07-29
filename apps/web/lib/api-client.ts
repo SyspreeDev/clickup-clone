@@ -76,6 +76,63 @@ export async function apiFetch<T = unknown>(path: string, options: RequestOption
   return data as T;
 }
 
+/**
+ * Multipart uploads can't go through apiFetch, which JSON-encodes its body and
+ * sets Content-Type — the browser has to set that itself so it can add the
+ * boundary. Kept here rather than inline at call sites so uploads still get the
+ * 401-refresh retry and real server error messages.
+ */
+export async function apiUpload<T>(path: string, formData: FormData): Promise<T> {
+  const doFetch = (token: string | null) =>
+    fetch(`${API_URL}${path}`, {
+      method: "POST",
+      credentials: "include",
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      body: formData,
+    });
+
+  let res = await doFetch(useAuthStore.getState().accessToken);
+
+  if (res.status === 401) {
+    const newToken = await refreshAccessToken();
+    if (newToken) res = await doFetch(newToken);
+  }
+
+  const isJson = res.headers.get("content-type")?.includes("application/json");
+  const data = isJson ? await res.json() : undefined;
+
+  if (!res.ok) {
+    const error = data?.error ?? {};
+    throw new ApiError(res.status, error.message ?? res.statusText, error.code, error.issues);
+  }
+
+  return data as T;
+}
+
+/** Fetches a binary body (an authorized file download) rather than JSON. */
+export async function apiDownload(path: string): Promise<Blob> {
+  const doFetch = (token: string | null) =>
+    fetch(`${API_URL}${path}`, {
+      credentials: "include",
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+
+  let res = await doFetch(useAuthStore.getState().accessToken);
+
+  if (res.status === 401) {
+    const newToken = await refreshAccessToken();
+    if (newToken) res = await doFetch(newToken);
+  }
+
+  if (!res.ok) {
+    const isJson = res.headers.get("content-type")?.includes("application/json");
+    const error = isJson ? (await res.json())?.error : undefined;
+    throw new ApiError(res.status, error?.message ?? res.statusText, error?.code);
+  }
+
+  return res.blob();
+}
+
 export const api = {
   get: <T>(path: string, options?: RequestOptions) => apiFetch<T>(path, { ...options, method: "GET" }),
   post: <T>(path: string, body?: unknown, options?: RequestOptions) =>

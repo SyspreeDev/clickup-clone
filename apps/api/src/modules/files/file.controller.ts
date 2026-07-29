@@ -25,6 +25,13 @@ export async function uploadFile(req: Request, res: Response) {
   );
   res.status(201).json(file);
 }
+export async function downloadFile(req: Request, res: Response) {
+  const file = await fileService.readFileForUser(req.params.id, req.user!.id);
+  res.setHeader("Content-Type", file.mimeType || "application/octet-stream");
+  res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(file.name)}"`);
+  res.send(file.buffer);
+}
+
 export async function deleteFile(req: Request, res: Response) {
   await fileService.deleteFile(req.params.id);
   res.status(204).send();

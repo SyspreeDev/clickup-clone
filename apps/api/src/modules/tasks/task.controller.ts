@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { BadRequestError } from "../../lib/errors";
 import * as taskService from "./task.service";
 import * as checklistService from "./checklist.service";
 import * as commentService from "./comment.service";
@@ -34,6 +35,15 @@ export async function addLabel(req: Request, res: Response) {
 }
 export async function removeLabel(req: Request, res: Response) {
   res.json(await taskService.removeLabel(req.params.taskId, req.params.labelId));
+}
+
+export async function addAttachment(req: Request, res: Response) {
+  if (!req.file) throw new BadRequestError("No file uploaded");
+  res.status(201).json(await taskService.addAttachment(req.params.taskId, req.user!.id, req.file));
+}
+export async function deleteAttachment(req: Request, res: Response) {
+  await taskService.deleteAttachment(req.params.id);
+  res.status(204).send();
 }
 
 export async function listSubtasks(req: Request, res: Response) {
