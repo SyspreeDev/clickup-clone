@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   CheckSquare,
   Users2,
-  FolderKanban,
   MessagesSquare,
   FileText,
   BarChart3,
@@ -20,7 +19,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { WorkspaceSwitcher } from "@/components/layout/workspace-switcher";
-import { listProjects } from "@/lib/queries/projects";
+import { SidebarTree } from "@/components/layout/sidebar-tree";
+import { listTree } from "@/lib/queries/hierarchy";
 import { useAuthStore } from "@/stores/auth-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { logout as logoutRequest } from "@/lib/queries/auth";
@@ -66,20 +66,26 @@ export function Sidebar({ workspaceId }: { workspaceId: string }) {
   const isMobileOpen = useSidebarStore((s) => s.isMobileOpen);
   const closeMobile = useSidebarStore((s) => s.close);
 
-  const { data: projects } = useQuery({
-    queryKey: ["projects", workspaceId],
-    queryFn: () => listProjects(workspaceId),
+  // Spaces → folders → lists, already access-filtered by the API.
+  const { data: spaces } = useQuery({
+    queryKey: ["tree", workspaceId],
+    queryFn: () => listTree(workspaceId),
   });
+
+  // Reports aggregate company-wide data and are ADMIN-only server-side, so don't
+  // show members a link that can only ever return 403.
+  const workspaceRole = user?.workspaces?.find((w) => w.id === workspaceId)?.role;
+  const isManager = workspaceRole === "OWNER" || workspaceRole === "ADMIN";
 
   const base = `/workspace/${workspaceId}`;
   const nav = [
     { href: base, icon: LayoutDashboard, label: "Dashboard" },
     { href: `${base}/my-tasks`, icon: CheckSquare, label: "My Tasks" },
-    { href: `${base}/teams`, icon: Users2, label: "Teams" },
+    { href: `${base}/teams`, icon: Users2, label: "Spaces" },
     { href: `${base}/chat`, icon: MessagesSquare, label: "Chat" },
     { href: `${base}/meetings`, icon: CalendarClock, label: "Meetings" },
     { href: `${base}/files`, icon: FileText, label: "Files" },
-    { href: `${base}/reports`, icon: BarChart3, label: "Reports" },
+    ...(isManager ? [{ href: `${base}/reports`, icon: BarChart3, label: "Reports" }] : []),
   ];
 
   async function handleLogout() {
@@ -112,45 +118,16 @@ export function Sidebar({ workspaceId }: { workspaceId: string }) {
 
         <div>
           <div className="flex items-center justify-between px-2.5 py-1">
-            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Projects</span>
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Spaces</span>
             <button
               onClick={() => router.push(`${base}/projects/new`)}
               className="rounded p-0.5 text-muted-foreground hover:bg-sidebar-border/60 hover:text-sidebar-foreground"
-              aria-label="Create project"
+              aria-label="Create list"
             >
               <Plus className="h-3.5 w-3.5" />
             </button>
           </div>
-          <div className="space-y-0.5">
-            {projects?.length ? (
-              projects.map((project) => {
-                const href = `${base}/projects/${project.id}/board`;
-                const active = pathname?.startsWith(`${base}/projects/${project.id}`);
-                return (
-                  <Link
-                    key={project.id}
-                    href={href}
-                    className={cn(
-                      "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors",
-                      active
-                        ? "bg-primary/10 text-primary"
-                        : "text-sidebar-foreground/80 hover:bg-sidebar-border/60 hover:text-sidebar-foreground",
-                    )}
-                  >
-                    <span
-                      className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-[10px] font-bold"
-                      style={{ backgroundColor: `${project.color ?? "#6366f1"}22`, color: project.color ?? "#6366f1" }}
-                    >
-                      <FolderKanban className="h-3 w-3" />
-                    </span>
-                    <span className="truncate">{project.name}</span>
-                  </Link>
-                );
-              })
-            ) : (
-              <p className="px-2.5 py-1 text-xs text-muted-foreground">No projects yet</p>
-            )}
-          </div>
+          <SidebarTree spaces={spaces} base={base} onNavigate={closeMobile} />
         </div>
       </div>
 
