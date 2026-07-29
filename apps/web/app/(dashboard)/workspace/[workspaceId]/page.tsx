@@ -25,7 +25,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getDashboard } from "@/lib/queries/workspaces";
 import { useCommandPaletteStore } from "@/stores/command-palette-store";
-import { useAuthStore } from "@/stores/auth-store";
 
 function activityLabel(action: string) {
   return action
@@ -38,9 +37,6 @@ function activityLabel(action: string) {
 export default function WorkspaceDashboardPage({ params }: { params: Promise<{ workspaceId: string }> }) {
   const { workspaceId } = use(params);
   const openPalette = useCommandPaletteStore((s) => s.open);
-  // Reports are ADMIN-only server-side, so members shouldn't be offered the shortcut.
-  const workspaceRole = useAuthStore((s) => s.user?.workspaces?.find((w) => w.id === workspaceId)?.role);
-  const isManager = workspaceRole === "OWNER" || workspaceRole === "ADMIN";
 
   const { data, isLoading } = useQuery({
     queryKey: ["dashboard", workspaceId],
@@ -120,14 +116,6 @@ export default function WorkspaceDashboardPage({ params }: { params: Promise<{ w
                     <span className="text-xs">Schedule meeting</span>
                   </Button>
                 </Link>
-                {isManager && (
-                  <Link href={`${base}/reports`}>
-                    <Button variant="secondary" className="h-auto w-full flex-col gap-1.5 py-3">
-                      <ActivityIcon className="h-4 w-4" />
-                      <span className="text-xs">View reports</span>
-                    </Button>
-                  </Link>
-                )}
               </CardContent>
             </Card>
           </div>

@@ -4,7 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Command } from "cmdk";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutDashboard, CheckSquare, Users2, FolderKanban, Plus, BarChart3, FileText, Hash, CalendarClock } from "lucide-react";
+import { LayoutDashboard, CheckSquare, Users2, FolderKanban, Plus, FileText, Hash, CalendarClock } from "lucide-react";
 import { useCommandPaletteStore } from "@/stores/command-palette-store";
 import { listProjects } from "@/lib/queries/projects";
 import { search as searchApi } from "@/lib/queries/search";
@@ -116,11 +116,9 @@ export function CommandPalette({ workspaceId }: { workspaceId: string }) {
                 <Command.Group heading="Navigate">
                   <Item icon={LayoutDashboard} onSelect={() => go(base)}>Dashboard</Item>
                   <Item icon={CheckSquare} onSelect={() => go(`${base}/my-tasks`)}>My Tasks</Item>
-                  <Item icon={Users2} onSelect={() => go(`${base}/teams`)}>Teams</Item>
+                  <Item icon={Users2} onSelect={() => go(`${base}/teams`)}>Spaces</Item>
                   <Item icon={Hash} onSelect={() => go(`${base}/chat`)}>Chat</Item>
                   <Item icon={CalendarClock} onSelect={() => go(`${base}/meetings`)}>Meetings</Item>
-                  <Item icon={FileText} onSelect={() => go(`${base}/files`)}>Files</Item>
-                  <Item icon={BarChart3} onSelect={() => go(`${base}/reports`)}>Reports</Item>
                 </Command.Group>
 
                 <Command.Group heading="Quick create">

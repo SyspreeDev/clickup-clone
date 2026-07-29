@@ -8,8 +8,6 @@ import {
   CheckSquare,
   Users2,
   MessagesSquare,
-  FileText,
-  BarChart3,
   CalendarClock,
   Settings,
   Plus,
@@ -72,20 +70,16 @@ export function Sidebar({ workspaceId }: { workspaceId: string }) {
     queryFn: () => listTree(workspaceId),
   });
 
-  // Reports aggregate company-wide data and are ADMIN-only server-side, so don't
-  // show members a link that can only ever return 403.
-  const workspaceRole = user?.workspaces?.find((w) => w.id === workspaceId)?.role;
-  const isManager = workspaceRole === "OWNER" || workspaceRole === "ADMIN";
-
   const base = `/workspace/${workspaceId}`;
+  // Files and Reports are deliberately absent: a client's documents belong on
+  // that client's task, and the reports screen wasn't earning its place. Both
+  // pages still exist at their URLs.
   const nav = [
     { href: base, icon: LayoutDashboard, label: "Dashboard" },
     { href: `${base}/my-tasks`, icon: CheckSquare, label: "My Tasks" },
     { href: `${base}/teams`, icon: Users2, label: "Spaces" },
     { href: `${base}/chat`, icon: MessagesSquare, label: "Chat" },
     { href: `${base}/meetings`, icon: CalendarClock, label: "Meetings" },
-    { href: `${base}/files`, icon: FileText, label: "Files" },
-    ...(isManager ? [{ href: `${base}/reports`, icon: BarChart3, label: "Reports" }] : []),
   ];
 
   async function handleLogout() {
