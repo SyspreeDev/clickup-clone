@@ -2,11 +2,12 @@ import type { NextFunction, Request, Response } from "express";
 import type { Role } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { assertProjectRole } from "../../lib/access";
+import { asyncHandler } from "../../lib/asyncHandler";
 import { NotFoundError, UnauthorizedError } from "../../lib/errors";
 
 /** Resolves :taskId (or a custom param/lookup) to its project and enforces project role. */
 export function requireTaskProjectAccess(minRole: Role = "GUEST", paramName = "taskId") {
-  return async (req: Request, _res: Response, next: NextFunction) => {
+  return asyncHandler(async (req: Request, _res: Response, next: NextFunction) => {
     if (!req.user) throw new UnauthorizedError();
     const task = await prisma.task.findUnique({ where: { id: req.params[paramName] } });
     if (!task) throw new NotFoundError("Task not found");
@@ -14,14 +15,14 @@ export function requireTaskProjectAccess(minRole: Role = "GUEST", paramName = "t
     req.projectRole = await assertProjectRole(req.user.id, task.projectId, minRole);
     req.params.projectId = task.projectId;
     next();
-  };
+  });
 }
 
 /** Generic: resolves a sub-resource id (:id) to its taskId via `findTaskId`, then to
  * that task's project, and enforces project role. Used for comments/checklists/
  * checklist-items/time-entries/dependencies which don't carry :taskId in their path. */
 export function requireTaskAccessVia(findTaskId: (id: string) => Promise<string | null>, minRole: Role = "GUEST") {
-  return async (req: Request, _res: Response, next: NextFunction) => {
+  return asyncHandler(async (req: Request, _res: Response, next: NextFunction) => {
     if (!req.user) throw new UnauthorizedError();
     const taskId = await findTaskId(req.params.id);
     if (!taskId) throw new NotFoundError("Resource not found");
@@ -30,7 +31,7 @@ export function requireTaskAccessVia(findTaskId: (id: string) => Promise<string 
 
     req.projectRole = await assertProjectRole(req.user.id, task.projectId, minRole);
     next();
-  };
+  });
 }
 
 export const viaComment = async (id: string) => (await prisma.comment.findUnique({ where: { id } }))?.taskId ?? null;

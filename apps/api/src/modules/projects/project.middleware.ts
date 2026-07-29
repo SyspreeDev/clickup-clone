@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import type { Role } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { assertProjectRole } from "../../lib/access";
+import { asyncHandler } from "../../lib/asyncHandler";
 import { NotFoundError, UnauthorizedError } from "../../lib/errors";
 
 /** For routes keyed by a sub-resource id (workflow state / label / milestone) that
@@ -10,7 +11,9 @@ export function requireProjectAccessVia(
   resolveProjectId: (req: Request) => Promise<string | null>,
   minRole: Role = "MEMBER",
 ) {
-  return async (req: Request, _res: Response, next: NextFunction) => {
+  // asyncHandler: Express 4 does not catch async middleware rejections, so a
+  // bare throw here would crash the process instead of returning 403/404.
+  return asyncHandler(async (req: Request, _res: Response, next: NextFunction) => {
     if (!req.user) throw new UnauthorizedError();
     const projectId = await resolveProjectId(req);
     if (!projectId) throw new NotFoundError("Resource not found");
@@ -18,7 +21,7 @@ export function requireProjectAccessVia(
     req.projectRole = await assertProjectRole(req.user.id, projectId, minRole);
     req.params.projectId = projectId;
     next();
-  };
+  });
 }
 
 export const viaWorkflowState = async (req: Request) => {
