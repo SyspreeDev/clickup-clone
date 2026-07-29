@@ -41,6 +41,45 @@ export interface TreeSpace {
 
 export const listTree = (workspaceId: string) => api.get<TreeSpace[]>(`/api/workspaces/${workspaceId}/tree`);
 
+/** A list row on a Space/Folder overview, with task progress. */
+export interface OverviewList extends TreeList {
+  status: string;
+  startDate: string | null;
+  targetDate: string | null;
+  total: number;
+  completed: number;
+  percent: number;
+}
+
+export interface ContainerOverview {
+  container: {
+    id: string;
+    name: string;
+    icon: string | null;
+    color: string | null;
+    kind: "space" | "folder";
+    isPrivate?: boolean;
+    description?: string | null;
+    teamId?: string;
+  };
+  folders: Array<{
+    id: string;
+    name: string;
+    icon: string | null;
+    color: string | null;
+    isPrivate: boolean;
+    _count: { projects: number };
+  }>;
+  lists: OverviewList[];
+}
+
+export const getOverview = (workspaceId: string, scope: { teamId?: string; folderId?: string }) => {
+  const qs = new URLSearchParams();
+  if (scope.teamId) qs.set("teamId", scope.teamId);
+  if (scope.folderId) qs.set("folderId", scope.folderId);
+  return api.get<ContainerOverview>(`/api/workspaces/${workspaceId}/overview?${qs}`);
+};
+
 export const createFolder = (workspaceId: string, input: CreateProjectFolderInput) =>
   api.post<TreeFolder>(`/api/workspaces/${workspaceId}/list-folders`, input);
 

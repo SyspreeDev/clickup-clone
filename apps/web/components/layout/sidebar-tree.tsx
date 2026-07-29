@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown, ChevronRight, Folder, FolderOpen, Hash, Lock, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { NewListButton } from "@/components/hierarchy/new-list-dialog";
 import type { TreeFolder, TreeList, TreeSpace } from "@/lib/queries/hierarchy";
 
 /** One list row — the leaf of Space → Folder → List. */
@@ -46,10 +47,14 @@ function ListRow({
 
 function FolderRow({
   folder,
+  spaceId,
+  workspaceId,
   base,
   onNavigate,
 }: {
   folder: TreeFolder;
+  spaceId: string;
+  workspaceId: string;
   base: string;
   onNavigate?: () => void;
 }) {
@@ -58,23 +63,32 @@ function FolderRow({
 
   return (
     <div>
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-1.5 rounded-lg py-1.5 pl-[22px] pr-2 text-sm text-sidebar-foreground/80 transition-colors hover:bg-sidebar-border/60 hover:text-sidebar-foreground"
-        aria-expanded={open}
-      >
-        {open ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
-        {open ? (
-          <FolderOpen className="h-3.5 w-3.5 shrink-0" style={{ color: folder.color ?? undefined }} />
-        ) : (
-          <Folder className="h-3.5 w-3.5 shrink-0" style={{ color: folder.color ?? undefined }} />
-        )}
-        <span className="truncate">{folder.name}</span>
-        {folder.isPrivate && <Lock className="h-3 w-3 shrink-0 text-muted-foreground" />}
-        <span className="ml-auto shrink-0 text-[11px] tabular-nums text-muted-foreground">
-          {folder.lists.length || ""}
-        </span>
-      </button>
+      <div className="group/row flex items-center gap-1 rounded-lg pr-1.5 transition-colors hover:bg-sidebar-border/60">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="shrink-0 pl-[22px] text-sidebar-foreground/80"
+          aria-label={open ? "Collapse folder" : "Expand folder"}
+          aria-expanded={open}
+        >
+          {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+        </button>
+        <Link
+          href={`${base}/folder/${folder.id}`}
+          onClick={onNavigate}
+          className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5 text-sm text-sidebar-foreground/80 hover:text-sidebar-foreground"
+          title={folder.name}
+        >
+          {open ? (
+            <FolderOpen className="h-3.5 w-3.5 shrink-0" style={{ color: folder.color ?? undefined }} />
+          ) : (
+            <Folder className="h-3.5 w-3.5 shrink-0" style={{ color: folder.color ?? undefined }} />
+          )}
+          <span className="truncate">{folder.name}</span>
+          {folder.isPrivate && <Lock className="h-3 w-3 shrink-0 text-muted-foreground" />}
+        </Link>
+        <NewListButton workspaceId={workspaceId} teamId={spaceId} folderId={folder.id} label="New list in folder" />
+        <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">{folder.lists.length || ""}</span>
+      </div>
 
       {open &&
         (folder.lists.length > 0 ? (
@@ -88,32 +102,60 @@ function FolderRow({
   );
 }
 
-function SpaceRow({ space, base, onNavigate }: { space: TreeSpace; base: string; onNavigate?: () => void }) {
+function SpaceRow({
+  space,
+  workspaceId,
+  base,
+  onNavigate,
+}: {
+  space: TreeSpace;
+  workspaceId: string;
+  base: string;
+  onNavigate?: () => void;
+}) {
   const [open, setOpen] = useState(true);
   const listCount = space.lists.length + space.folders.reduce((n, f) => n + f.lists.length, 0);
 
   return (
     <div>
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-semibold text-sidebar-foreground transition-colors hover:bg-sidebar-border/60"
-        aria-expanded={open}
-      >
-        {open ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
-        <span
-          className="flex h-4 w-4 shrink-0 items-center justify-center rounded"
-          style={{ backgroundColor: `${space.color ?? "#f59e0b"}22`, color: space.color ?? "#f59e0b" }}
+      <div className="group/row flex items-center gap-1 rounded-lg pr-1.5 transition-colors hover:bg-sidebar-border/60">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="shrink-0 pl-2 text-sidebar-foreground"
+          aria-label={open ? "Collapse space" : "Expand space"}
+          aria-expanded={open}
         >
-          <Layers className="h-2.5 w-2.5" />
-        </span>
-        <span className="truncate">{space.name}</span>
-        <span className="ml-auto shrink-0 text-[11px] tabular-nums text-muted-foreground">{listCount || ""}</span>
-      </button>
+          {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+        </button>
+        <Link
+          href={`${base}/space/${space.id}`}
+          onClick={onNavigate}
+          className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5 text-sm font-semibold text-sidebar-foreground"
+          title={space.name}
+        >
+          <span
+            className="flex h-4 w-4 shrink-0 items-center justify-center rounded"
+            style={{ backgroundColor: `${space.color ?? "#f59e0b"}22`, color: space.color ?? "#f59e0b" }}
+          >
+            <Layers className="h-2.5 w-2.5" />
+          </span>
+          <span className="truncate">{space.name}</span>
+        </Link>
+        <NewListButton workspaceId={workspaceId} teamId={space.id} label="New list in space" />
+        <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">{listCount || ""}</span>
+      </div>
 
       {open && (
         <>
           {space.folders.map((folder) => (
-            <FolderRow key={folder.id} folder={folder} base={base} onNavigate={onNavigate} />
+            <FolderRow
+              key={folder.id}
+              folder={folder}
+              spaceId={space.id}
+              workspaceId={workspaceId}
+              base={base}
+              onNavigate={onNavigate}
+            />
           ))}
           {space.lists.map((list) => (
             <ListRow key={list.id} list={list} base={base} depth={2} onNavigate={onNavigate} />
@@ -134,10 +176,12 @@ function SpaceRow({ space, base, onNavigate }: { space: TreeSpace; base: string;
  */
 export function SidebarTree({
   spaces,
+  workspaceId,
   base,
   onNavigate,
 }: {
   spaces: TreeSpace[] | undefined;
+  workspaceId: string;
   base: string;
   onNavigate?: () => void;
 }) {
@@ -158,7 +202,13 @@ export function SidebarTree({
   return (
     <div className="space-y-0.5">
       {spaces.map((space) => (
-        <SpaceRow key={space.id} space={space} base={base} onNavigate={onNavigate} />
+        <SpaceRow
+          key={space.id}
+          space={space}
+          workspaceId={workspaceId}
+          base={base}
+          onNavigate={onNavigate}
+        />
       ))}
     </div>
   );

@@ -103,6 +103,90 @@ export async function getSidebarTree(workspaceId: string, userId: string) {
   });
 }
 
+/**
+ * Powers the Space/Folder overview screen: the lists in that container with
+ * task progress, plus (for a space) its folders. Access-filtered, so a member
+ * cannot pull the contents of a space they are not in.
+ */
+export async function getContainerOverview(
+  workspaceId: string,
+  userId: string,
+  scope: { teamId?: string; folderId?: string },
+) {
+  const accessFilter = await accessibleProjectWhere(userId, workspaceId);
+  if (!accessFilter) return null;
+
+  const container = scope.folderId
+    ? await prisma.projectFolder.findFirst({
+        where: { id: scope.folderId, workspaceId },
+        select: { id: true, name: true, icon: true, color: true, isPrivate: true, teamId: true },
+      })
+    : await prisma.team.findFirst({
+        where: { id: scope.teamId, workspaceId },
+        select: { id: true, name: true, icon: true, color: true, description: true },
+      });
+  if (!container) throw new NotFoundError(scope.folderId ? "Folder not found" : "Space not found");
+
+  const lists = await prisma.project.findMany({
+    where: {
+      workspaceId,
+      isArchived: false,
+      ...accessFilter,
+      // A folder shows its own lists. A space shows its folders separately, so
+      // its table lists only what sits directly in the space — otherwise
+      // folder-nested lists would appear twice on the same screen.
+      ...(scope.folderId ? { folderId: scope.folderId } : { teamId: scope.teamId, folderId: null }),
+    },
+    select: {
+      id: true,
+      name: true,
+      key: true,
+      color: true,
+      icon: true,
+      status: true,
+      startDate: true,
+      targetDate: true,
+      folderId: true,
+      teamId: true,
+      position: true,
+      _count: { select: { tasks: true } },
+    },
+    orderBy: [{ position: "asc" }, { createdAt: "asc" }],
+  });
+
+  // One grouped query rather than one count per list.
+  const completedByList = await prisma.task.groupBy({
+    by: ["projectId"],
+    where: {
+      projectId: { in: lists.map((l) => l.id) },
+      isArchived: false,
+      workflowState: { category: "COMPLETED" },
+    },
+    _count: { _all: true },
+  });
+  const completedMap = new Map(completedByList.map((r) => [r.projectId, r._count._all]));
+
+  return {
+    container: { ...container, kind: scope.folderId ? "folder" : "space" },
+    folders: scope.folderId
+      ? []
+      : await prisma.projectFolder.findMany({
+          where: { teamId: scope.teamId, workspaceId },
+          select: { id: true, name: true, icon: true, color: true, isPrivate: true, _count: { select: { projects: true } } },
+          orderBy: [{ position: "asc" }, { createdAt: "asc" }],
+        }),
+    lists: lists.map((l) => {
+      const completed = completedMap.get(l.id) ?? 0;
+      return {
+        ...l,
+        total: l._count.tasks,
+        completed,
+        percent: l._count.tasks ? Math.round((completed / l._count.tasks) * 100) : 0,
+      };
+    }),
+  };
+}
+
 /** Moves a list into a folder or straight into a space, and/or reorders it. */
 export async function moveProject(projectId: string, input: MoveProjectInput) {
   const project = await prisma.project.findUnique({ where: { id: projectId }, select: { workspaceId: true } });

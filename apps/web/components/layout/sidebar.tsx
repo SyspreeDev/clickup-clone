@@ -127,7 +127,7 @@ export function Sidebar({ workspaceId }: { workspaceId: string }) {
               <Plus className="h-3.5 w-3.5" />
             </button>
           </div>
-          <SidebarTree spaces={spaces} base={base} onNavigate={closeMobile} />
+          <SidebarTree spaces={spaces} workspaceId={workspaceId} base={base} onNavigate={closeMobile} />
         </div>
       </div>
 

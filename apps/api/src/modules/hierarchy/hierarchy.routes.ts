@@ -10,6 +10,7 @@ import { authenticate } from "../../middleware/authenticate";
 import { requireWorkspaceRole, requireProjectMember } from "../../middleware/requireRole";
 import { validateBody } from "../../middleware/validate";
 import { asyncHandler } from "../../lib/asyncHandler";
+import { BadRequestError } from "../../lib/errors";
 import { requireFolderWorkspaceAccess } from "./hierarchy.middleware";
 import * as svc from "./hierarchy.service";
 
@@ -22,6 +23,18 @@ hierarchyRouter.get(
   requireWorkspaceRole("GUEST"),
   asyncHandler(async (req, res) => {
     res.json(await svc.getSidebarTree(req.params.workspaceId, req.user!.id));
+  }),
+);
+
+// ── Space / Folder overview: its lists with progress ──
+hierarchyRouter.get(
+  "/workspaces/:workspaceId/overview",
+  requireWorkspaceRole("GUEST"),
+  asyncHandler(async (req, res) => {
+    const teamId = (req.query.teamId as string) || undefined;
+    const folderId = (req.query.folderId as string) || undefined;
+    if (!teamId && !folderId) throw new BadRequestError("Pass either teamId or folderId");
+    res.json(await svc.getContainerOverview(req.params.workspaceId, req.user!.id, { teamId, folderId }));
   }),
 );
 
