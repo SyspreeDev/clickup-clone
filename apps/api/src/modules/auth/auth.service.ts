@@ -139,7 +139,7 @@ export async function refresh(refreshToken: string) {
     data: { revoked: true, replacedByTokenId: stored.id },
   });
 
-  return { user: publicUser(user), ...newTokens };
+  return { user: await userWithWorkspaces(user.id), ...newTokens };
 }
 
 export async function logout(refreshToken: string | undefined) {
@@ -201,7 +201,13 @@ export async function resetPassword(input: ResetPasswordInput) {
   ]);
 }
 
-export async function getMe(userId: string) {
+/**
+ * The client stores whatever a session response hands it, and routing plus every
+ * manager-only control reads `workspaces` off that. So any endpoint that returns
+ * a user must return this shape — a response carrying a user without workspaces
+ * silently demotes an admin to someone with no workspace at all.
+ */
+export async function userWithWorkspaces(userId: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: {
@@ -220,5 +226,7 @@ export async function getMe(userId: string) {
     })),
   };
 }
+
+export const getMe = userWithWorkspaces;
 
 export { publicUser, issueTokenPair };
