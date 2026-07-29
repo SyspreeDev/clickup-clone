@@ -21,6 +21,7 @@ export async function createProject(workspaceId: string, creatorId: string, inpu
     data: {
       workspaceId,
       teamId: input.teamId,
+      folderId: input.folderId,
       name: input.name,
       key: input.key.toUpperCase(),
       description: input.description,

@@ -10,6 +10,8 @@ export const createProjectSchema = z.object({
     .regex(/^[A-Z0-9]+$/, "Key must be uppercase letters/numbers"),
   description: z.string().max(2000).optional(),
   teamId: z.string().optional(),
+  /** Optional folder inside the space, for Space → Folder → List nesting. */
+  folderId: z.string().optional(),
   icon: z.string().optional(),
   color: z.string().optional(),
   status: z.enum(PROJECT_STATUSES).default("PLANNED"),
