@@ -1,4 +1,5 @@
 import { prisma } from "../../lib/prisma";
+import { accessibleProjectWhere } from "../../lib/access";
 import { NotFoundError } from "../../lib/errors";
 import type {
   CreateProjectInput,
@@ -39,11 +40,23 @@ export async function createProject(workspaceId: string, creatorId: string, inpu
   });
 }
 
-export async function listProjects(workspaceId: string, filters: { teamId?: string; status?: string }) {
+/**
+ * Lists only the projects this user may open, so the sidebar never reveals the
+ * names of other teams' work. Managers (workspace ADMIN/OWNER) get everything.
+ */
+export async function listProjects(
+  workspaceId: string,
+  userId: string,
+  filters: { teamId?: string; status?: string },
+) {
+  const accessFilter = await accessibleProjectWhere(userId, workspaceId);
+  if (!accessFilter) return [];
+
   return prisma.project.findMany({
     where: {
       workspaceId,
       isArchived: false,
+      ...accessFilter,
       ...(filters.teamId ? { teamId: filters.teamId } : {}),
       ...(filters.status ? { status: filters.status as never } : {}),
     },

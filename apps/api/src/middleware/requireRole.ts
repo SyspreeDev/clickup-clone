@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import type { Role } from "@prisma/client";
 import { ROLE_RANK } from "@repo/shared-types";
 import { prisma } from "../lib/prisma";
+import { assertProjectRole } from "../lib/access";
 import { ForbiddenError, UnauthorizedError } from "../lib/errors";
 
 declare global {
@@ -33,21 +34,18 @@ export function requireWorkspaceRole(minRole: Role) {
   };
 }
 
-/** Loads the caller's ProjectMember row for :projectId and enforces a minimum role rank. */
+/**
+ * Enforces a minimum role on :projectId using the *effective* role from
+ * `resolveProjectRole`, so workspace managers and whole-team membership are
+ * honoured — not only people added to the project one by one.
+ */
 export function requireProjectMember(minRole: Role = "GUEST") {
   return async (req: Request, _res: Response, next: NextFunction) => {
     if (!req.user) throw new UnauthorizedError();
     const projectId = req.params.projectId;
     if (!projectId) throw new ForbiddenError("Missing projectId");
 
-    const membership = await prisma.projectMember.findUnique({
-      where: { projectId_userId: { projectId, userId: req.user.id } },
-    });
-    if (!membership) throw new ForbiddenError("Not a member of this project");
-    if (ROLE_RANK[membership.role] < ROLE_RANK[minRole]) {
-      throw new ForbiddenError(`Requires role ${minRole} or higher`);
-    }
-    req.projectRole = membership.role;
+    req.projectRole = await assertProjectRole(req.user.id, projectId, minRole);
     next();
   };
 }

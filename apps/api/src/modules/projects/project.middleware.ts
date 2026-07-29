@@ -1,8 +1,8 @@
 import type { NextFunction, Request, Response } from "express";
 import type { Role } from "@prisma/client";
-import { ROLE_RANK } from "@repo/shared-types";
 import { prisma } from "../../lib/prisma";
-import { ForbiddenError, NotFoundError, UnauthorizedError } from "../../lib/errors";
+import { assertProjectRole } from "../../lib/access";
+import { NotFoundError, UnauthorizedError } from "../../lib/errors";
 
 /** For routes keyed by a sub-resource id (workflow state / label / milestone) that
  * don't carry :projectId directly — resolves the parent project and enforces role. */
@@ -15,13 +15,7 @@ export function requireProjectAccessVia(
     const projectId = await resolveProjectId(req);
     if (!projectId) throw new NotFoundError("Resource not found");
 
-    const membership = await prisma.projectMember.findUnique({
-      where: { projectId_userId: { projectId, userId: req.user.id } },
-    });
-    if (!membership) throw new ForbiddenError("Not a member of this project");
-    if (ROLE_RANK[membership.role] < ROLE_RANK[minRole]) {
-      throw new ForbiddenError(`Requires role ${minRole} or higher`);
-    }
+    req.projectRole = await assertProjectRole(req.user.id, projectId, minRole);
     req.params.projectId = projectId;
     next();
   };

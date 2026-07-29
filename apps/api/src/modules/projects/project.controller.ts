@@ -8,7 +8,8 @@ export async function create(req: Request, res: Response) {
 }
 
 export async function list(req: Request, res: Response) {
-  const projects = await projectService.listProjects(req.params.workspaceId, {
+  if (!req.user) return;
+  const projects = await projectService.listProjects(req.params.workspaceId, req.user.id, {
     teamId: req.query.teamId as string | undefined,
     status: req.query.status as string | undefined,
   });

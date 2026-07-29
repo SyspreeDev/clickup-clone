@@ -11,6 +11,7 @@ searchRouter.get(
   "/workspaces/:workspaceId/search",
   requireWorkspaceRole("GUEST"),
   asyncHandler(async (req, res) => {
-    res.json(await search(req.params.workspaceId, (req.query.q as string) ?? ""));
+    if (!req.user) return;
+    res.json(await search(req.params.workspaceId, req.user.id, (req.query.q as string) ?? ""));
   }),
 );

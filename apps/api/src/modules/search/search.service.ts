@@ -1,18 +1,28 @@
 import { prisma } from "../../lib/prisma";
+import { accessibleProjectWhere } from "../../lib/access";
 
-export async function search(workspaceId: string, q: string) {
-  if (!q || q.length < 2) {
-    return { tasks: [], projects: [], members: [], files: [] };
-  }
+const EMPTY = { tasks: [], projects: [], members: [], files: [] };
+
+/**
+ * Federated search, constrained to the projects this user may open — otherwise
+ * search would happily surface other teams' task titles and file names.
+ */
+export async function search(workspaceId: string, userId: string, q: string) {
+  if (!q || q.length < 2) return EMPTY;
+
+  const accessFilter = await accessibleProjectWhere(userId, workspaceId);
+  if (!accessFilter) return EMPTY;
+
+  const projectScope = { workspaceId, isArchived: false, ...accessFilter };
 
   const [tasks, projects, members, files] = await Promise.all([
     prisma.task.findMany({
-      where: { project: { workspaceId }, title: { contains: q, mode: "insensitive" }, isArchived: false },
+      where: { project: projectScope, title: { contains: q, mode: "insensitive" }, isArchived: false },
       include: { project: { select: { id: true, key: true, name: true } } },
       take: 8,
     }),
     prisma.project.findMany({
-      where: { workspaceId, name: { contains: q, mode: "insensitive" }, isArchived: false },
+      where: { ...projectScope, name: { contains: q, mode: "insensitive" } },
       take: 8,
     }),
     prisma.workspaceMember.findMany({
@@ -21,7 +31,13 @@ export async function search(workspaceId: string, q: string) {
       take: 8,
     }),
     prisma.file.findMany({
-      where: { workspaceId, name: { contains: q, mode: "insensitive" } },
+      where: {
+        workspaceId,
+        name: { contains: q, mode: "insensitive" },
+        // Files pinned to a project inherit that project's access; loose files in
+        // the shared library stay visible workspace-wide.
+        OR: [{ projectId: null }, { project: projectScope }],
+      },
       take: 8,
     }),
   ]);

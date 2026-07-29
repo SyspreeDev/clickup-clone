@@ -1,4 +1,5 @@
 import { prisma } from "../../lib/prisma";
+import { accessibleProjectWhere } from "../../lib/access";
 import { NotFoundError } from "../../lib/errors";
 import { emailProvider } from "../../lib/email";
 import { env } from "../../config/env";
@@ -125,6 +126,11 @@ export async function getDashboard(workspaceId: string, userId: string) {
   const now = new Date();
   const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
+  // Every KPI below is counted over the projects this user may actually open, so
+  // a Web-team member's dashboard reflects their work, not the whole company's.
+  const accessFilter = (await accessibleProjectWhere(userId, workspaceId)) ?? { id: "__none__" };
+  const projectScope = { workspaceId, isArchived: false, ...accessFilter };
+
   const [
     activeProjects,
     teamMembers,
@@ -136,19 +142,19 @@ export async function getDashboard(workspaceId: string, userId: string) {
     unreadNotifications,
     upcomingMeetings,
   ] = await Promise.all([
-    prisma.project.count({ where: { workspaceId, isArchived: false, status: "ACTIVE" } }),
+    prisma.project.count({ where: { ...projectScope, status: "ACTIVE" } }),
     prisma.workspaceMember.count({ where: { workspaceId, status: "ACTIVE" } }),
     prisma.task.count({
-      where: { project: { workspaceId }, assignees: { some: { userId } }, isArchived: false, workflowState: { category: { not: "COMPLETED" } } },
+      where: { project: projectScope, assignees: { some: { userId } }, isArchived: false, workflowState: { category: { not: "COMPLETED" } } },
     }),
     prisma.task.count({
-      where: { project: { workspaceId }, workflowState: { category: "COMPLETED" }, isArchived: false },
+      where: { project: projectScope, workflowState: { category: "COMPLETED" }, isArchived: false },
     }),
     prisma.task.count({
-      where: { project: { workspaceId }, workflowState: { category: { not: "COMPLETED" } }, isArchived: false },
+      where: { project: projectScope, workflowState: { category: { not: "COMPLETED" } }, isArchived: false },
     }),
     prisma.task.findMany({
-      where: { project: { workspaceId }, dueDate: { gte: now, lte: in7Days }, isArchived: false },
+      where: { project: projectScope, dueDate: { gte: now, lte: in7Days }, isArchived: false },
       orderBy: { dueDate: "asc" },
       take: 8,
       include: { project: { select: { id: true, name: true, key: true } } },

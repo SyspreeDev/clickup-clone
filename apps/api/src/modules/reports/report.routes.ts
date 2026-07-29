@@ -7,7 +7,9 @@ import * as reportService from "./report.service";
 
 export const reportRouter: Router = Router();
 reportRouter.use(authenticate);
-reportRouter.use("/workspaces/:workspaceId/reports", requireWorkspaceRole("GUEST"));
+// Reports aggregate company-wide data — per-employee workload, time logged and
+// completion rates across every team — so they stay manager-only by design.
+reportRouter.use("/workspaces/:workspaceId/reports", requireWorkspaceRole("ADMIN"));
 
 reportRouter.get(
   "/workspaces/:workspaceId/reports/team-productivity",

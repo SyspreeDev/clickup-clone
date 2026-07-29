@@ -1,8 +1,8 @@
 import type { NextFunction, Request, Response } from "express";
 import type { Role } from "@prisma/client";
-import { ROLE_RANK } from "@repo/shared-types";
 import { prisma } from "../../lib/prisma";
-import { ForbiddenError, NotFoundError, UnauthorizedError } from "../../lib/errors";
+import { assertProjectRole } from "../../lib/access";
+import { NotFoundError, UnauthorizedError } from "../../lib/errors";
 
 /** Resolves :taskId (or a custom param/lookup) to its project and enforces project role. */
 export function requireTaskProjectAccess(minRole: Role = "GUEST", paramName = "taskId") {
@@ -11,13 +11,7 @@ export function requireTaskProjectAccess(minRole: Role = "GUEST", paramName = "t
     const task = await prisma.task.findUnique({ where: { id: req.params[paramName] } });
     if (!task) throw new NotFoundError("Task not found");
 
-    const membership = await prisma.projectMember.findUnique({
-      where: { projectId_userId: { projectId: task.projectId, userId: req.user.id } },
-    });
-    if (!membership) throw new ForbiddenError("Not a member of this project");
-    if (ROLE_RANK[membership.role] < ROLE_RANK[minRole]) {
-      throw new ForbiddenError(`Requires role ${minRole} or higher`);
-    }
+    req.projectRole = await assertProjectRole(req.user.id, task.projectId, minRole);
     req.params.projectId = task.projectId;
     next();
   };
@@ -34,13 +28,7 @@ export function requireTaskAccessVia(findTaskId: (id: string) => Promise<string 
     const task = await prisma.task.findUnique({ where: { id: taskId } });
     if (!task) throw new NotFoundError("Task not found");
 
-    const membership = await prisma.projectMember.findUnique({
-      where: { projectId_userId: { projectId: task.projectId, userId: req.user.id } },
-    });
-    if (!membership) throw new ForbiddenError("Not a member of this project");
-    if (ROLE_RANK[membership.role] < ROLE_RANK[minRole]) {
-      throw new ForbiddenError(`Requires role ${minRole} or higher`);
-    }
+    req.projectRole = await assertProjectRole(req.user.id, task.projectId, minRole);
     next();
   };
 }
