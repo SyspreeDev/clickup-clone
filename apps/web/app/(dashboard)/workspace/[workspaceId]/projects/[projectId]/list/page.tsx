@@ -61,7 +61,12 @@ export default function ListViewPage({ params }: { params: Promise<{ workspaceId
               {!isCollapsed && (
                 <div>
                   {stateTasks.map((task) => (
-                    <TaskRow key={task.id} task={task} projectKey={project.key} />
+                    <TaskRow
+                      key={task.id}
+                      task={task}
+                      projectKey={project.key}
+                      states={project.workflowStates}
+                    />
                   ))}
                   <div className="px-4 py-1.5">
                     <CreateTaskDialog projectId={projectId} workflowStateId={state.id} />

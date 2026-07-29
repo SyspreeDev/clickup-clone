@@ -5,6 +5,7 @@ import {
   createLabelSchema,
   createMilestoneSchema,
   createWorkflowStateSchema,
+  updateWorkflowStateSchema,
 } from "@repo/shared-types";
 import { authenticate } from "../../middleware/authenticate";
 import { requireWorkspaceRole, requireProjectMember } from "../../middleware/requireRole";
@@ -47,6 +48,7 @@ projectRouter.post(
 projectRouter.patch(
   "/workflow-states/:id",
   requireProjectAccessVia(viaWorkflowState, "TEAM_LEAD"),
+  validateBody(updateWorkflowStateSchema),
   asyncHandler(controller.updateWorkflowState),
 );
 projectRouter.delete(

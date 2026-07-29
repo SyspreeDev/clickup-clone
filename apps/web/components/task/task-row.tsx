@@ -4,11 +4,22 @@ import { format, isPast } from "date-fns";
 import { Calendar, MessageSquare, CheckSquare } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PriorityIcon } from "@/components/task/priority-icon";
+import { StatusPicker } from "@/components/task/status-picker";
 import { useTaskDetailStore } from "@/stores/task-detail-store";
 import { cn } from "@/lib/utils";
 import type { TaskSummary } from "@/lib/queries/tasks";
+import type { WorkflowState } from "@/lib/queries/projects";
 
-export function TaskRow({ task, projectKey }: { task: TaskSummary; projectKey: string }) {
+export function TaskRow({
+  task,
+  projectKey,
+  states,
+}: {
+  task: TaskSummary;
+  projectKey: string;
+  /** Pass this list's statuses to make the row's status pill a live dropdown. */
+  states?: WorkflowState[];
+}) {
   const openTask = useTaskDetailStore((s) => s.openTask);
   const overdue = task.dueDate && isPast(new Date(task.dueDate)) && task.workflowState.category !== "COMPLETED";
 
@@ -34,6 +45,20 @@ export function TaskRow({ task, projectKey }: { task: TaskSummary; projectKey: s
               {label.name}
             </span>
           ))}
+        </div>
+      )}
+
+      {states && (
+        // The row itself opens the task, so keep the dropdown's clicks to itself.
+        <div className="hidden shrink-0 md:block" onClick={(e) => e.stopPropagation()}>
+          <StatusPicker
+            taskId={task.id}
+            projectId={task.projectId}
+            states={states}
+            currentStateId={task.workflowStateId}
+            currentPosition={task.position}
+            align="end"
+          />
         </div>
       )}
 

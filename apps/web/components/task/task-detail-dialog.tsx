@@ -16,8 +16,10 @@ import { PriorityIcon, priorityLabel, PRIORITY_CONFIG } from "@/components/task/
 import { ChecklistSection } from "@/components/task/checklist-section";
 import { CommentSection } from "@/components/task/comment-section";
 import { AssigneePicker } from "@/components/task/assignee-picker";
+import { StatusPicker } from "@/components/task/status-picker";
 import { useTaskDetailStore } from "@/stores/task-detail-store";
 import { getTask, updateTask, deleteTask } from "@/lib/queries/tasks";
+import { listWorkflowStates } from "@/lib/queries/projects";
 import { ApiError } from "@/lib/api-client";
 import { TASK_PRIORITIES } from "@repo/shared-types";
 
@@ -32,6 +34,13 @@ export function TaskDetailDialog() {
     queryKey: ["task", openTaskId],
     queryFn: () => getTask(openTaskId!),
     enabled: !!openTaskId,
+  });
+
+  // The status dropdown needs this list's own statuses, not just the current one.
+  const { data: states } = useQuery({
+    queryKey: ["workflow-states", task?.projectId],
+    queryFn: () => listWorkflowStates(task!.projectId),
+    enabled: !!task?.projectId,
   });
 
   useEffect(() => {
@@ -101,10 +110,13 @@ export function TaskDetailDialog() {
 
             <div className="space-y-4 border-t border-border bg-muted/30 p-5 md:border-l md:border-t-0">
               <Field label="Status">
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: task.workflowState.color }} />
-                  {task.workflowState.name}
-                </div>
+                <StatusPicker
+                  taskId={task.id}
+                  projectId={task.projectId}
+                  states={states}
+                  currentStateId={task.workflowStateId}
+                  currentPosition={task.position}
+                />
               </Field>
 
               <Field label="Priority">

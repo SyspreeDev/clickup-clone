@@ -1,12 +1,13 @@
 import { prisma } from "../../lib/prisma";
 import { accessibleProjectWhere } from "../../lib/access";
-import { NotFoundError } from "../../lib/errors";
+import { BadRequestError, NotFoundError } from "../../lib/errors";
 import type {
   CreateProjectInput,
   UpdateProjectInput,
   CreateLabelInput,
   CreateMilestoneInput,
   CreateWorkflowStateInput,
+  UpdateWorkflowStateInput,
 } from "@repo/shared-types";
 
 const DEFAULT_WORKFLOW_STATES: Array<{ name: string; category: CreateWorkflowStateInput["category"]; color: string }> = [
@@ -106,18 +107,56 @@ export async function removeMember(projectId: string, userId: string) {
 }
 
 export async function listWorkflowStates(projectId: string) {
-  return prisma.workflowState.findMany({ where: { projectId }, orderBy: { position: "asc" } });
+  return prisma.workflowState.findMany({
+    where: { projectId },
+    // The count tells the status editor whether a delete needs the tasks moving first.
+    include: { _count: { select: { tasks: true } } },
+    orderBy: { position: "asc" },
+  });
 }
 
 export async function createWorkflowState(projectId: string, input: CreateWorkflowStateInput) {
   return prisma.workflowState.create({ data: { projectId, ...input } });
 }
 
-export async function updateWorkflowState(id: string, input: Partial<CreateWorkflowStateInput>) {
+export async function updateWorkflowState(id: string, input: UpdateWorkflowStateInput) {
   return prisma.workflowState.update({ where: { id }, data: input });
 }
 
-export async function deleteWorkflowState(id: string) {
+/**
+ * Task.workflowStateId is required, so a status holding tasks cannot simply be
+ * dropped — the caller has to say where those tasks go, exactly as ClickUp asks.
+ */
+export async function deleteWorkflowState(id: string, moveToId?: string) {
+  const state = await prisma.workflowState.findUnique({
+    where: { id },
+    select: { projectId: true, _count: { select: { tasks: true } } },
+  });
+  if (!state) throw new NotFoundError("Status not found");
+
+  const remaining = await prisma.workflowState.count({ where: { projectId: state.projectId } });
+  if (remaining <= 1) throw new BadRequestError("A list must keep at least one status");
+
+  if (state._count.tasks > 0) {
+    if (!moveToId) {
+      const n = state._count.tasks;
+      throw new BadRequestError(
+        `${n} task${n === 1 ? " still uses" : "s still use"} this status — choose a status to move them to first`,
+      );
+    }
+    const target = await prisma.workflowState.findFirst({
+      where: { id: moveToId, projectId: state.projectId },
+      select: { id: true },
+    });
+    if (!target) throw new BadRequestError("Move tasks to a status on the same list");
+
+    await prisma.$transaction([
+      prisma.task.updateMany({ where: { workflowStateId: id }, data: { workflowStateId: target.id } }),
+      prisma.workflowState.delete({ where: { id } }),
+    ]);
+    return;
+  }
+
   await prisma.workflowState.delete({ where: { id } });
 }
 

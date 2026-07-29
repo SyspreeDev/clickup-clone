@@ -44,3 +44,10 @@ export const createWorkflowStateSchema = z.object({
   position: z.number(),
 });
 export type CreateWorkflowStateInput = z.infer<typeof createWorkflowStateSchema>;
+
+/**
+ * projectId is deliberately absent — an unvalidated PATCH body would let a
+ * status hop to a list the caller has no rights over.
+ */
+export const updateWorkflowStateSchema = createWorkflowStateSchema.partial();
+export type UpdateWorkflowStateInput = z.infer<typeof updateWorkflowStateSchema>;

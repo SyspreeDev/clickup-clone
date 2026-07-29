@@ -51,7 +51,9 @@ export async function updateWorkflowState(req: Request, res: Response) {
   res.json(await projectService.updateWorkflowState(req.params.id, req.body));
 }
 export async function deleteWorkflowState(req: Request, res: Response) {
-  await projectService.deleteWorkflowState(req.params.id);
+  // ?moveTo=<statusId> rehomes any tasks still sitting in the status being removed.
+  const moveTo = typeof req.query.moveTo === "string" ? req.query.moveTo : undefined;
+  await projectService.deleteWorkflowState(req.params.id, moveTo);
   res.status(204).send();
 }
 

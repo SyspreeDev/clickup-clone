@@ -1,5 +1,12 @@
 import { api } from "@/lib/api-client";
-import type { CreateProjectInput, UpdateProjectInput, CreateLabelInput, CreateMilestoneInput } from "@repo/shared-types";
+import type {
+  CreateProjectInput,
+  UpdateProjectInput,
+  CreateLabelInput,
+  CreateMilestoneInput,
+  CreateWorkflowStateInput,
+  UpdateWorkflowStateInput,
+} from "@repo/shared-types";
 
 export interface WorkflowState {
   id: string;
@@ -9,6 +16,8 @@ export interface WorkflowState {
   category: "BACKLOG" | "UNSTARTED" | "STARTED" | "COMPLETED" | "CANCELLED";
   position: number;
   isDefault: boolean;
+  /** Only returned by listWorkflowStates — how many tasks currently sit here. */
+  _count?: { tasks: number };
 }
 
 export interface Label {
@@ -60,6 +69,23 @@ export const getProject = (projectId: string) => api.get<Project>(`/api/projects
 export const updateProject = (projectId: string, input: UpdateProjectInput) =>
   api.patch<Project>(`/api/projects/${projectId}`, input);
 export const archiveProject = (projectId: string) => api.delete<void>(`/api/projects/${projectId}`);
+
+// ── Per-list custom statuses (WorkflowState) ──
+
+export const listWorkflowStates = (projectId: string) =>
+  api.get<WorkflowState[]>(`/api/projects/${projectId}/workflow-states`);
+
+export const createWorkflowState = (projectId: string, input: CreateWorkflowStateInput) =>
+  api.post<WorkflowState>(`/api/projects/${projectId}/workflow-states`, input);
+
+export const updateWorkflowState = (id: string, input: UpdateWorkflowStateInput) =>
+  api.patch<WorkflowState>(`/api/workflow-states/${id}`, input);
+
+/** moveToId rehomes tasks still in this status; required when the status isn't empty. */
+export const deleteWorkflowState = (id: string, moveToId?: string) =>
+  api.delete<void>(
+    `/api/workflow-states/${id}${moveToId ? `?moveTo=${encodeURIComponent(moveToId)}` : ""}`,
+  );
 
 export const createLabel = (projectId: string, input: CreateLabelInput) =>
   api.post<Label>(`/api/projects/${projectId}/labels`, input);

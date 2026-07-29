@@ -8,6 +8,8 @@ import { Kanban, List, CalendarDays, GanttChartSquare, Table2 } from "lucide-rea
 import { cn } from "@/lib/utils";
 import { getProject } from "@/lib/queries/projects";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StatusManager } from "@/components/project/status-manager";
+import { useAuthStore } from "@/stores/auth-store";
 
 const VIEWS = [
   { key: "board", label: "Board", icon: Kanban },
@@ -34,6 +36,17 @@ export default function ProjectLayout({
 
   const base = `/workspace/${workspaceId}/projects/${projectId}`;
 
+  // Mirrors the server guard: TEAM_LEAD on this list, or manager rank in the workspace.
+  const user = useAuthStore((s) => s.user);
+  const workspaceRole = user?.workspaces?.find((w) => w.id === workspaceId)?.role;
+  const listRole = project?.members?.find((m) => m.userId === user?.id)?.role;
+  const canEditStatuses =
+    workspaceRole === "OWNER" ||
+    workspaceRole === "ADMIN" ||
+    listRole === "OWNER" ||
+    listRole === "ADMIN" ||
+    listRole === "TEAM_LEAD";
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex items-center justify-between gap-4 border-b border-border px-4 pt-3">
@@ -57,6 +70,12 @@ export default function ProjectLayout({
             )}
           </div>
         </div>
+
+        {canEditStatuses && (
+          <div className="shrink-0 pb-2">
+            <StatusManager projectId={projectId} />
+          </div>
+        )}
       </div>
       <nav className="flex items-center gap-1 border-b border-border px-4">
         {VIEWS.map((v) => {
