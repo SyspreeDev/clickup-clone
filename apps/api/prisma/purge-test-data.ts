@@ -6,8 +6,13 @@
  *   pnpm --filter api db:purge-test --yes    # actually delete
  *
  * Selection is deliberately narrow and explicit:
+ *   --slug=a,b            workspaces with exactly these slugs
  *   --slug-prefix=a,b     workspaces whose slug starts with any of these
  *   --email-domain=a,b    users whose email ends with @<domain>
+ *
+ * Prefer --slug. Prefixes overlap in ways that bite: "syspree-digital" is a
+ * prefix of "syspree-digital-pvt-ltd", so a prefix meant for the disused
+ * workspace would take the live one with it.
  *
  * Order matters. Nine tables reference User with no onDelete, so Postgres
  * restricts deleting anyone who still authors a task, comment, attachment,
@@ -35,10 +40,13 @@ function flagList(args: string[], name: string, fallback: string[]) {
 async function main() {
   const args = process.argv.slice(2);
   const execute = args.includes("--yes");
-  const slugPrefixes = flagList(args, "slug-prefix", DEFAULT_SLUG_PREFIXES);
+  const force = args.includes("--force");
+  const exactSlugs = flagList(args, "slug", []);
+  const slugPrefixes = flagList(args, "slug-prefix", exactSlugs.length > 0 ? [] : DEFAULT_SLUG_PREFIXES);
   const emailDomains = flagList(args, "email-domain", DEFAULT_EMAIL_DOMAINS);
 
-  console.log(`\nWorkspace slugs starting with: ${slugPrefixes.join(", ")}`);
+  if (exactSlugs.length > 0) console.log(`\nWorkspace slugs exactly:       ${exactSlugs.join(", ")}`);
+  if (slugPrefixes.length > 0) console.log(`\nWorkspace slugs starting with: ${slugPrefixes.join(", ")}`);
   console.log(`Users with email at:           ${emailDomains.map((d) => "@" + d).join(", ")}\n`);
 
   const allWorkspaces = await prisma.workspace.findMany({
@@ -46,8 +54,29 @@ async function main() {
     orderBy: { createdAt: "asc" },
   });
 
-  const doomedWorkspaces = allWorkspaces.filter((w) => slugPrefixes.some((p) => w.slug.startsWith(p)));
+  // A workspace someone has signed into with a real identity provider is a
+  // workspace in use. This is what makes an overlapping --slug-prefix harmless.
+  const inUse = new Set(
+    (
+      await prisma.workspace.findMany({
+        where: { members: { some: { user: { accounts: { some: {} } } } } },
+        select: { id: true },
+      })
+    ).map((w) => w.id),
+  );
+
+  const matched = allWorkspaces.filter(
+    (w) => exactSlugs.includes(w.slug) || slugPrefixes.some((p) => w.slug.startsWith(p)),
+  );
+  const protectedWorkspaces = force ? [] : matched.filter((w) => inUse.has(w.id));
+  const doomedWorkspaces = matched.filter((w) => !protectedWorkspaces.includes(w));
   const keptWorkspaceIds = allWorkspaces.filter((w) => !doomedWorkspaces.includes(w)).map((w) => w.id);
+
+  if (protectedWorkspaces.length > 0) {
+    console.log("── Matched but PROTECTED (a real sign-in belongs to them) ──");
+    for (const w of protectedWorkspaces) console.log(`  ${w.slug}  —  ${w.name}  —  pass --force to override`);
+    console.log("");
+  }
 
   console.log("── Workspaces to delete ──");
   if (doomedWorkspaces.length === 0) console.log("  (none)");
