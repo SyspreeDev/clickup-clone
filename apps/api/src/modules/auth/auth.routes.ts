@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type RequestHandler } from "express";
 import passport from "passport";
 import {
   registerSchema,
@@ -44,12 +44,11 @@ if (isGoogleOAuthConfigured) {
     }),
   );
 } else {
-  authRouter.get("/google", (_req, res) => {
-    res.status(501).json({
-      error: { message: "Google OAuth is not configured. Set GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET." },
-    });
-  });
-  authRouter.get("/google/callback", (_req, res) => {
-    res.status(501).json({ error: { message: "Google OAuth is not configured." } });
-  });
+  // Both are reached by a browser navigation from the sign-in button, so send
+  // the person to a page that can explain itself rather than raw JSON.
+  const notConfigured: RequestHandler = (_req, res) => {
+    res.redirect(`${env.webOrigin}/login?error=google-unavailable`);
+  };
+  authRouter.get("/google", notConfigured);
+  authRouter.get("/google/callback", notConfigured);
 }

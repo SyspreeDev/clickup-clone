@@ -1,7 +1,8 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -13,6 +14,27 @@ import { useAuthStore } from "@/stores/auth-store";
 import { login as loginRequest, getMe } from "@/lib/queries/auth";
 import { ApiError } from "@/lib/api-client";
 import { API_URL } from "@/lib/api-client";
+
+/** Failures during the Google round-trip come back as ?error=… on this page. */
+const OAUTH_ERRORS: Record<string, string> = {
+  google: "Google sign-in was cancelled or refused. Try again, or use your email and password.",
+  oauth: "We couldn't finish signing you in with Google. Try again.",
+  "google-unavailable": "Google sign-in isn't set up on this server yet. Use your email and password for now.",
+};
+
+/**
+ * Kept as its own Suspense-wrapped child so useSearchParams doesn't drag the
+ * whole login route out of static rendering.
+ */
+function OAuthErrorNotice() {
+  const message = OAUTH_ERRORS[useSearchParams().get("error") ?? ""];
+  if (!message) return null;
+  return (
+    <p className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+      {message}
+    </p>
+  );
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -43,6 +65,10 @@ export default function LoginPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
         <p className="text-sm text-muted-foreground">Sign in to your workspace</p>
       </div>
+
+      <Suspense fallback={null}>
+        <OAuthErrorNotice />
+      </Suspense>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-2">

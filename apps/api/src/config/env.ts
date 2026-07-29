@@ -39,8 +39,11 @@ export const env = {
   webOrigin: process.env.CORS_ORIGIN ?? "http://localhost:3000",
 };
 
+// The callback URL is part of the requirement, not optional extra: the strategy
+// passes it to Google verbatim, so half-configured credentials would register a
+// strategy that can only fail at redirect time.
 export const isGoogleOAuthConfigured = Boolean(
-  env.googleClientId && env.googleClientSecret,
+  env.googleClientId && env.googleClientSecret && env.googleCallbackUrl,
 );
 
 export const isZoomConfigured = Boolean(

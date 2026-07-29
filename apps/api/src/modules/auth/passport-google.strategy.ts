@@ -20,8 +20,18 @@ export function configureGoogleStrategy() {
       },
       async (_accessToken, _refreshToken, profile, done) => {
         try {
-          const email = profile.emails?.[0]?.value;
+          const primary = profile.emails?.[0];
+          const email = primary?.value;
           if (!email) return done(new Error("Google account has no email"));
+
+          // Matching on email is what lets Google sign-in adopt an account that
+          // already registered with a password. That is only safe while Google
+          // vouches for the address — an unverified one would let anyone who can
+          // set an arbitrary email on a Google account walk into someone else's.
+          const verified = (primary as { verified?: boolean | string }).verified;
+          if (verified === false || verified === "false") {
+            return done(new Error("Google has not verified this email address"));
+          }
 
           const existingAccount = await prisma.account.findUnique({
             where: { provider_providerAccountId: { provider: "google", providerAccountId: profile.id } },
