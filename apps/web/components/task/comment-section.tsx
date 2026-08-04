@@ -1,24 +1,24 @@
 "use client";
 
-import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { MessageSquare } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { RichTextComposer, RichTextContent } from "@/components/ui/rich-text";
 import { createComment } from "@/lib/queries/tasks";
+import { ApiError } from "@/lib/api-client";
+import { useAuthStore } from "@/stores/auth-store";
 import type { TaskDetail } from "@/lib/queries/tasks";
 
 export function CommentSection({ task }: { task: TaskDetail }) {
-  const [content, setContent] = useState("");
   const queryClient = useQueryClient();
+  const user = useAuthStore((s) => s.user);
 
   const mutation = useMutation({
-    mutationFn: () => createComment(task.id, { content }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["task", task.id] });
-      setContent("");
-    },
+    mutationFn: (content: unknown) => createComment(task.id, { content }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["task", task.id] }),
+    onError: (err) => toast.error(err instanceof ApiError ? err.message : "Could not post comment"),
   });
 
   return (
@@ -42,7 +42,9 @@ export function CommentSection({ task }: { task: TaskDetail }) {
                   {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
                 </span>
               </div>
-              <p className="text-sm">{typeof comment.content === "string" ? comment.content : ""}</p>
+              {/* Comments written before the editor existed are plain strings; the
+                  renderer normalises both shapes. */}
+              <RichTextContent value={comment.content} className="text-foreground" />
             </div>
           </div>
         ))}
@@ -51,19 +53,18 @@ export function CommentSection({ task }: { task: TaskDetail }) {
 
       <div className="flex items-start gap-2.5 pt-2">
         <Avatar className="h-7 w-7 shrink-0">
-          <AvatarFallback className="text-xs">{task.createdBy.name[0]}</AvatarFallback>
+          <AvatarImage src={user?.avatarUrl ?? undefined} />
+          <AvatarFallback className="text-xs">{(user?.name ?? "?")[0]}</AvatarFallback>
         </Avatar>
-        <div className="flex-1 space-y-2">
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
+        <div className="flex-1">
+          <RichTextComposer
             placeholder="Leave a comment…"
-            rows={2}
-            className="w-full resize-none rounded-lg border border-border bg-background p-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+            submitLabel="Comment"
+            disabled={mutation.isPending}
+            onSubmit={async (doc) => {
+              await mutation.mutateAsync(doc);
+            }}
           />
-          <Button size="sm" disabled={!content.trim() || mutation.isPending} onClick={() => mutation.mutate()}>
-            Comment
-          </Button>
         </div>
       </div>
     </div>

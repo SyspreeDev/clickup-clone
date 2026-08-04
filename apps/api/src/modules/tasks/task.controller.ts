@@ -71,6 +71,9 @@ export async function listTimeEntries(req: Request, res: Response) {
 export async function createTimeEntry(req: Request, res: Response) {
   res.status(201).json(await taskService.createTimeEntry(req.params.taskId, req.user!.id, req.body));
 }
+export async function stopTimeEntry(req: Request, res: Response) {
+  res.json(await taskService.stopTimeEntry(req.params.id, req.user!.id));
+}
 export async function deleteTimeEntry(req: Request, res: Response) {
   await taskService.deleteTimeEntry(req.params.id);
   res.status(204).send();

@@ -1,5 +1,30 @@
 import { api, apiUpload } from "@/lib/api-client";
-import type { CreateTaskInput, UpdateTaskInput, MoveTaskInput, CreateCommentInput } from "@repo/shared-types";
+import type {
+  CreateTaskInput,
+  UpdateTaskInput,
+  MoveTaskInput,
+  CreateCommentInput,
+  CreateDependencyInput,
+  DependencyType,
+} from "@repo/shared-types";
+
+/** The slice of a task returned on either side of a dependency link. */
+export interface LinkedTask {
+  id: string;
+  title: string;
+  number: number;
+  workflowState: { id: string; name: string; color: string; category: string };
+}
+
+export interface TimeEntry {
+  id: string;
+  description: string | null;
+  startedAt: string;
+  /** Null means the timer is still running. */
+  endedAt: string | null;
+  durationMinutes: number | null;
+  user: { id: string; name: string; avatarUrl: string | null };
+}
 
 export interface Attachment {
   id: string;
@@ -49,8 +74,10 @@ export interface TaskDetail extends TaskSummary {
     position: number;
     items: Array<{ id: string; title: string; isCompleted: boolean; position: number; assigneeId: string | null }>;
   }>;
-  dependencies: Array<{ id: string; type: string; dependsOn: { id: string; title: string; number: number } }>;
-  dependents: Array<{ id: string; type: string; task: { id: string; title: string; number: number } }>;
+  /** Links where this task is the one that depends: `dependsOn` must happen first. */
+  dependencies: Array<{ id: string; type: DependencyType; dependsOn: LinkedTask }>;
+  /** Links pointing the other way: `task` is waiting on this one. */
+  dependents: Array<{ id: string; type: DependencyType; task: LinkedTask }>;
   comments: Array<{
     id: string;
     content: unknown;
@@ -61,14 +88,7 @@ export interface TaskDetail extends TaskSummary {
     isDeleted: boolean;
     replies: Array<{ id: string; content: unknown; author: { id: string; name: string; avatarUrl: string | null }; createdAt: string }>;
   }>;
-  timeEntries: Array<{
-    id: string;
-    description: string | null;
-    startedAt: string;
-    endedAt: string | null;
-    durationMinutes: number | null;
-    user: { id: string; name: string; avatarUrl: string | null };
-  }>;
+  timeEntries: TimeEntry[];
   attachments: Attachment[];
 }
 
@@ -105,6 +125,23 @@ export const deleteAttachment = (id: string) => api.delete<void>(`/api/attachmen
 // stored URLs are not publicly served.
 
 export const createComment = (taskId: string, input: CreateCommentInput) => api.post(`/api/tasks/${taskId}/comments`, input);
+
+/**
+ * Links two tasks. The row is created *on* `taskId`, meaning "taskId depends on
+ * dependsOnId" — so to record that A blocks B you post to B with dependsOnId A.
+ */
+export const addDependency = (taskId: string, input: CreateDependencyInput) =>
+  api.post<{ id: string }>(`/api/tasks/${taskId}/dependencies`, input);
+export const removeDependency = (id: string) => api.delete<void>(`/api/dependencies/${id}`);
+
+export const listTimeEntries = (taskId: string) => api.get<TimeEntry[]>(`/api/tasks/${taskId}/time-entries`);
+/** Omit endedAt and durationMinutes to start a running timer. */
+export const createTimeEntry = (
+  taskId: string,
+  input: { startedAt: Date; endedAt?: Date; durationMinutes?: number; description?: string; isManual?: boolean },
+) => api.post<TimeEntry>(`/api/tasks/${taskId}/time-entries`, input);
+export const stopTimeEntry = (id: string) => api.patch<TimeEntry>(`/api/time-entries/${id}/stop`, {});
+export const deleteTimeEntry = (id: string) => api.delete<void>(`/api/time-entries/${id}`);
 
 export const listMyTasks = (workspaceId?: string) =>
   api.get<TaskSummary[]>(`/api/my-tasks${workspaceId ? `?workspaceId=${workspaceId}` : ""}`);

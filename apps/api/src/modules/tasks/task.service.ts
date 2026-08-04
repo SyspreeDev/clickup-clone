@@ -1,6 +1,7 @@
 import { prisma } from "../../lib/prisma";
 import { storageProvider } from "../../lib/storage";
-import { NotFoundError, BadRequestError } from "../../lib/errors";
+import { NotFoundError, BadRequestError, ForbiddenError, ConflictError } from "../../lib/errors";
+import { resolveProjectRole } from "../../lib/access";
 import { logActivity } from "../../lib/activity";
 import { createNotification } from "../notifications/notification.service";
 import { emitToProject } from "../../sockets";
@@ -60,8 +61,12 @@ export async function getTask(taskId: string) {
       createdBy: { select: { id: true, name: true, avatarUrl: true } },
       subtasks: { include: TASK_INCLUDE, orderBy: { position: "asc" } },
       checklists: { include: { items: { orderBy: { position: "asc" } } }, orderBy: { position: "asc" } },
-      dependencies: { include: { dependsOn: { select: { id: true, title: true, number: true } } } },
-      dependents: { include: { task: { select: { id: true, title: true, number: true } } } },
+      // workflowState comes along so the UI can say whether a blocker is actually
+      // finished, rather than just naming it.
+      dependencies: {
+        include: { dependsOn: { select: { id: true, title: true, number: true, workflowState: true } } },
+      },
+      dependents: { include: { task: { select: { id: true, title: true, number: true, workflowState: true } } } },
       comments: {
         where: { parentId: null },
         include: {
@@ -385,8 +390,27 @@ export async function addDependency(taskId: string, input: CreateDependencyInput
   if (!task) throw new NotFoundError("Task not found");
   if (taskId === input.dependsOnId) throw new BadRequestError("A task cannot depend on itself");
 
+  /**
+   * The route guard only covers `taskId`'s project. Without this check any member
+   * could link to an arbitrary task id in another team's private list and then read
+   * its title back out of `getTask`, which includes the linked task. Dependencies
+   * across lists are legitimate, so the test is "can the actor see it", not "is it
+   * in the same list".
+   */
+  const dependsOn = await prisma.task.findUnique({ where: { id: input.dependsOnId } });
+  if (!dependsOn) throw new NotFoundError("The task to link to was not found");
+  if (!(await resolveProjectRole(actorId, dependsOn.projectId))) {
+    throw new ForbiddenError("You do not have access to the task you are linking to");
+  }
+
+  const existing = await prisma.taskDependency.findUnique({
+    where: { taskId_dependsOnId: { taskId, dependsOnId: input.dependsOnId } },
+  });
+  if (existing) throw new ConflictError("Those tasks are already linked");
+
   const dependency = await prisma.taskDependency.create({
     data: { taskId, dependsOnId: input.dependsOnId, type: input.type },
+    include: { dependsOn: { select: { id: true, title: true, number: true, workflowState: true } } },
   });
 
   await logActivity({
@@ -423,13 +447,49 @@ export async function listTimeEntries(taskId: string) {
   });
 }
 
+/**
+ * Creates either a finished entry (time logged by hand) or a running one — an entry
+ * with no `endedAt` *is* the timer, which is what lets a timer survive a page reload
+ * or carry over to another device.
+ */
 export async function createTimeEntry(taskId: string, userId: string, input: CreateTimeEntryInput) {
   const durationMinutes =
     input.durationMinutes ??
     (input.endedAt ? Math.round((input.endedAt.getTime() - input.startedAt.getTime()) / 60000) : undefined);
 
+  // Two running timers on the same task by the same person would double-count the
+  // work, and leave the UI with no way to say which "stop" belongs to which.
+  if (durationMinutes === undefined) {
+    const running = await prisma.timeEntry.findFirst({ where: { taskId, userId, endedAt: null } });
+    if (running) throw new BadRequestError("A timer is already running on this task");
+  }
+
   return prisma.timeEntry.create({
     data: { taskId, userId, ...input, durationMinutes },
+    include: { user: { select: { id: true, name: true, avatarUrl: true } } },
+  });
+}
+
+/**
+ * Closes a running timer. Restricted to the person it belongs to: the UI only offers
+ * "stop" on your own timer, and stopping a colleague's would write time against
+ * their name without them knowing.
+ */
+export async function stopTimeEntry(id: string, userId: string) {
+  const entry = await prisma.timeEntry.findUnique({ where: { id } });
+  if (!entry) throw new NotFoundError("Time entry not found");
+  if (entry.userId !== userId) throw new ForbiddenError("You can only stop your own timer");
+  if (entry.endedAt) throw new BadRequestError("That timer has already been stopped");
+
+  const endedAt = new Date();
+  return prisma.timeEntry.update({
+    where: { id },
+    data: {
+      endedAt,
+      // Round up, so a short burst of work records as a minute rather than as zero.
+      durationMinutes: Math.max(1, Math.ceil((endedAt.getTime() - entry.startedAt.getTime()) / 60000)),
+    },
+    include: { user: { select: { id: true, name: true, avatarUrl: true } } },
   });
 }
 

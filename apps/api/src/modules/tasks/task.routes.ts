@@ -127,6 +127,13 @@ taskRouter.post(
   validateBody(createTimeEntrySchema),
   asyncHandler(controller.createTimeEntry),
 );
+// Stops a running timer. Ownership is enforced in the service — project access on
+// its own shouldn't let you close a colleague's timer.
+taskRouter.patch(
+  "/time-entries/:id/stop",
+  requireTaskAccessVia(viaTimeEntry, "MEMBER"),
+  asyncHandler(controller.stopTimeEntry),
+);
 taskRouter.delete("/time-entries/:id", requireTaskAccessVia(viaTimeEntry, "MEMBER"), asyncHandler(controller.deleteTimeEntry));
 
 taskRouter.get("/tasks/:taskId/comments", requireTaskProjectAccess("GUEST"), asyncHandler(controller.listComments));

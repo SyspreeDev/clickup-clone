@@ -19,6 +19,9 @@ import { AssigneePicker } from "@/components/task/assignee-picker";
 import { AttachmentSection } from "@/components/task/attachment-section";
 import { StatusPicker } from "@/components/task/status-picker";
 import { TagPicker } from "@/components/task/tag-picker";
+import { DependencySection } from "@/components/task/dependency-section";
+import { TimeTrackingSection } from "@/components/task/time-tracking-section";
+import { RichTextEditor } from "@/components/ui/rich-text";
 import { useTaskDetailStore } from "@/stores/task-detail-store";
 import { getTask, updateTask, deleteTask } from "@/lib/queries/tasks";
 import { listWorkflowStates } from "@/lib/queries/projects";
@@ -41,11 +44,12 @@ export function TaskDetailDialog() {
   const close = useTaskDetailStore((s) => s.close);
   const queryClient = useQueryClient();
   /**
-   * Local edits to the title and description, tagged with the task they belong
-   * to. Tagging them means opening a different client shows that client's text
-   * without an effect copying server state into state on every refetch.
+   * The in-progress title, tagged with the task it belongs to. Tagging it means
+   * opening a different client shows that client's title without an effect copying
+   * server state into state on every refetch. The description keeps its own draft
+   * inside the rich-text editor.
    */
-  const [draft, setDraft] = useState<{ taskId: string; title: string; description: string } | null>(null);
+  const [draft, setDraft] = useState<{ taskId: string; title: string } | null>(null);
 
   const { data: task } = useQuery({
     queryKey: ["task", openTaskId],
@@ -61,15 +65,10 @@ export function TaskDetailDialog() {
   });
 
   const originalTitle = task?.title ?? "";
-  const originalDescription = typeof task?.description === "string" ? task.description : "";
   const editing = draft?.taskId === openTaskId ? draft : null;
   const title = editing?.title ?? originalTitle;
-  const description = editing?.description ?? originalDescription;
 
-  const setTitle = (next: string) =>
-    setDraft({ taskId: openTaskId!, title: next, description });
-  const setDescription = (next: string) =>
-    setDraft({ taskId: openTaskId!, title, description: next });
+  const setTitle = (next: string) => setDraft({ taskId: openTaskId!, title: next });
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["task", openTaskId] });
@@ -115,18 +114,25 @@ export function TaskDetailDialog() {
                 rows={1}
                 className="mb-4 resize-none overflow-hidden bg-transparent text-xl font-semibold leading-snug outline-none"
               />
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                onBlur={() => description !== originalDescription && updateMutation.mutate({ description })}
+              <RichTextEditor
+                // Remount on task change so a fresh editor starts from the right
+                // client's brief rather than re-seeding an existing document.
+                key={task.id}
+                value={task.description}
+                onSave={(description) => updateMutation.mutate({ description })}
                 placeholder={DESCRIPTION_PLACEHOLDER}
-                rows={10}
-                className="mb-6 min-h-[200px] resize-y whitespace-pre-wrap rounded-lg border border-transparent bg-transparent p-2 text-sm leading-relaxed outline-none transition-colors hover:border-border focus:border-border"
+                className="mb-6"
+                minHeight={200}
+                toolbarWhenFocused
               />
 
               <AttachmentSection task={task} onChange={invalidate} />
               <Separator className="my-4" />
               <ChecklistSection task={task} onChange={invalidate} />
+              <Separator className="my-4" />
+              <DependencySection task={task} onChange={invalidate} />
+              <Separator className="my-4" />
+              <TimeTrackingSection task={task} onChange={invalidate} />
               <Separator className="my-4" />
               <CommentSection task={task} />
             </div>
