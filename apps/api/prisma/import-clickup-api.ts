@@ -30,6 +30,15 @@
  *   --attachments          also download and re-upload each task's files (default:
  *                         off — see the storage note below)
  *
+ * If the token can't list any Spaces, it usually means ClickUp has specific Folders
+ * or Lists shared with that account directly rather than the parent Space — a real,
+ * distinct sharing mode, not a broken token. This script detects that automatically
+ * and falls back to discovering lists by scanning every task the token can see, but
+ * the real Space name isn't visible in that mode, so everything lands under one
+ * placeholder Space (--space names it; otherwise "ClickUp Import"). Move lists to
+ * their real Spaces afterward in Flowspace, or get a token with real Space access
+ * if you'd rather this run place them correctly the first time.
+ *
  * Idempotent, matched by name/timestamp rather than a stored ClickUp id (Flowspace's
  * Task table has no external-id column): lists and tasks by name within their parent,
  * comments by (author, exact original timestamp), time entries by (user, exact start
@@ -249,26 +258,68 @@ async function main() {
     for (const s of page) if (!seenSpaceIds.has(s.id)) (seenSpaceIds.add(s.id), spaces.push(s));
   }
 
-  for (const space of spaces) {
-    if (spaceFilter && norm(space.name) !== norm(spaceFilter)) continue;
+  /**
+   * Some ClickUp accounts have specific Folders or Lists shared with them directly,
+   * without being added to the parent Space — GET /team/{id}/space then legitimately
+   * returns none, even though real tasks are reachable (GET /space/{id} on one of
+   * those ids returns ACCESS_015, but GET /folder/{id} and the task endpoints work
+   * fine). Detected by zero spaces coming back *before* any --space filter is
+   * applied, so a filter that simply doesn't match anything doesn't trigger this.
+   *
+   * There is no way to learn the real Space name in this mode, so every list found
+   * this way is grouped under one placeholder Space instead — --space doubles as
+   * that placeholder's name here, since there's no real Space name left to filter
+   * a token that can already see everything against.
+   */
+  const viaTaskScan = spaces.length === 0;
+  if (viaTaskScan) {
+    console.log(
+      "No Spaces are visible to this token — ClickUp is most likely sharing specific\n" +
+        "folders/lists with this account rather than the parent Space. Falling back to a\n" +
+        "scan of every task this token can see, grouped by its own folder/list. The real\n" +
+        "Space name isn't visible in this mode, so everything lands under one placeholder\n" +
+        `Space: "${spaceFilter ?? "ClickUp Import"}". Move lists into their real Spaces\n` +
+        "afterward in Flowspace, or ask whoever administers ClickUp for a token with real\n" +
+        "Space access if you'd rather this run place them correctly the first time.\n",
+    );
 
-    const seenFolderIds = new Set<string>();
-    const folders: CuFolder[] = [];
-    for (const archived of archivedPasses) {
-      const { folders: page } = await cu.get<{ folders: CuFolder[] }>(`/space/${space.id}/folder`, { archived });
-      for (const f of page) if (!seenFolderIds.has(f.id)) (seenFolderIds.add(f.id), folders.push(f));
+    const placeholderSpace: CuSpace = { id: "unresolved", name: spaceFilter ?? "ClickUp Import" };
+    const seenListIds = new Set<string>();
+    for await (const page of cu.paginate<CuTask & { folder?: CuFolder & { hidden?: boolean }; list?: CuList }>(
+      `/team/${team.id}/task`,
+      { include_closed: true, subtasks: true, archived: includeArchived },
+      "tasks",
+    )) {
+      for (const t of page) {
+        const list = t.list;
+        if (!list || seenListIds.has(list.id)) continue;
+        seenListIds.add(list.id);
+        const folder = t.folder && !t.folder.hidden ? { id: t.folder.id, name: t.folder.name, lists: [] } : null;
+        plans.push({ space: placeholderSpace, folder, list: { id: list.id, name: list.name } });
+      }
     }
-    for (const folder of folders) {
-      for (const list of folder.lists) plans.push({ space, folder, list });
-    }
+  } else {
+    for (const space of spaces) {
+      if (spaceFilter && norm(space.name) !== norm(spaceFilter)) continue;
 
-    const seenListIds = new Set(folders.flatMap((f) => f.lists.map((l) => l.id)));
-    const folderlessLists: CuList[] = [];
-    for (const archived of archivedPasses) {
-      const { lists: page } = await cu.get<{ lists: CuList[] }>(`/space/${space.id}/list`, { archived });
-      for (const l of page) if (!seenListIds.has(l.id)) (seenListIds.add(l.id), folderlessLists.push(l));
+      const seenFolderIds = new Set<string>();
+      const folders: CuFolder[] = [];
+      for (const archived of archivedPasses) {
+        const { folders: page } = await cu.get<{ folders: CuFolder[] }>(`/space/${space.id}/folder`, { archived });
+        for (const f of page) if (!seenFolderIds.has(f.id)) (seenFolderIds.add(f.id), folders.push(f));
+      }
+      for (const folder of folders) {
+        for (const list of folder.lists) plans.push({ space, folder, list });
+      }
+
+      const seenListIds = new Set(folders.flatMap((f) => f.lists.map((l) => l.id)));
+      const folderlessLists: CuList[] = [];
+      for (const archived of archivedPasses) {
+        const { lists: page } = await cu.get<{ lists: CuList[] }>(`/space/${space.id}/list`, { archived });
+        for (const l of page) if (!seenListIds.has(l.id)) (seenListIds.add(l.id), folderlessLists.push(l));
+      }
+      for (const list of folderlessLists) plans.push({ space, folder: null, list });
     }
-    for (const list of folderlessLists) plans.push({ space, folder: null, list });
   }
 
   const filtered = plans.filter((p) => !listFilter || norm(p.list.name).includes(norm(listFilter)));
@@ -285,8 +336,13 @@ async function main() {
 
   if (!execute) {
     console.log(
-      "\nDry run — nothing written, no task/comment/time/checklist data fetched yet (that only happens on --yes,\n" +
-        "to keep a dry run fast and free of write-adjacent API calls). Re-run with --yes to import.\n",
+      viaTaskScan
+        ? "\nDry run — nothing written. (Discovering lists this way already reads every task's full\n" +
+            "content once, since that's the only place their folder/list is visible in this mode —\n" +
+            "unlike the normal path, this dry run isn't meaningfully cheaper than --yes itself, just\n" +
+            "safe.) Re-run with --yes to import.\n"
+        : "\nDry run — nothing written, no task/comment/time/checklist data fetched yet (that only happens\n" +
+            "on --yes, to keep a dry run fast and free of write-adjacent API calls). Re-run with --yes to import.\n",
     );
     return;
   }
@@ -381,7 +437,16 @@ async function main() {
     );
 
     // subtasks=true so subtasks arrive inline with their siblings, in the same call.
-    for await (const page of cu.paginate<CuTask>(`/list/${plan.list.id}/task`, { include_closed: true, subtasks: true, archived: includeArchived }, "tasks")) {
+    // In fallback mode the per-list endpoint isn't reachable either (same access gap
+    // that made Space listing come back empty), so pull this one list's tasks out of
+    // the team-wide endpoint instead, filtered down to just it.
+    const taskSource = viaTaskScan
+      ? {
+          path: `/team/${team.id}/task`,
+          query: { include_closed: true, subtasks: true, archived: includeArchived, "list_ids[]": plan.list.id },
+        }
+      : { path: `/list/${plan.list.id}/task`, query: { include_closed: true, subtasks: true, archived: includeArchived } };
+    for await (const page of cu.paginate<CuTask>(taskSource.path, taskSource.query, "tasks")) {
       for (const cuTask of page) {
         if (limit > 0 && tasksProcessed >= limit) break;
         tasksProcessed++;
