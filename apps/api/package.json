@@ -17,6 +17,7 @@
     "db:grant": "tsx prisma/grant-access.ts",
     "db:purge-test": "tsx prisma/purge-test-data.ts",
     "db:import-clickup": "tsx prisma/import-clickup.ts",
+    "db:import-clickup-api": "tsx prisma/import-clickup-api.ts",
     "db:set-password": "tsx prisma/set-password.ts",
     "db:studio": "prisma studio"
   },

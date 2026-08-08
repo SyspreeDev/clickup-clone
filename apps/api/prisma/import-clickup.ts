@@ -25,19 +25,9 @@
  */
 import { readFileSync } from "node:fs";
 import { PrismaClient, type Prisma } from "@prisma/client";
+import { PIPELINE, LABEL_COLORS, PRIORITY_MAP, norm, flag, deriveKey, mapStatus, textToDoc } from "./import-shared";
 
 const prisma = new PrismaClient();
-
-/** Mirrors DEFAULT_WORKFLOW_STATES in project.service.ts — the SySpree pipeline. */
-const PIPELINE: Array<{ name: string; category: "UNSTARTED" | "STARTED" | "COMPLETED"; color: string }> = [
-  { name: "Open", category: "UNSTARTED", color: "#87909e" },
-  { name: "Design (Figma)", category: "STARTED", color: "#14b8a6" },
-  { name: "In Progress / Web Dev", category: "STARTED", color: "#3b82f6" },
-  { name: "In Review", category: "STARTED", color: "#f59e0b" },
-  { name: "Closed", category: "COMPLETED", color: "#22c55e" },
-];
-
-const LABEL_COLORS = ["#ff9412", "#3b82f6", "#14b8a6", "#a855f7", "#ef4444", "#22c55e", "#f59e0b"];
 
 // ─────────────────────────── CSV ───────────────────────────
 
@@ -126,8 +116,6 @@ const COLUMNS = {
 
 type Field = keyof typeof COLUMNS;
 
-const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
-
 function mapHeaders(header: string[]): Partial<Record<Field, number>> {
   const found: Partial<Record<Field, number>> = {};
   const normalised = header.map(norm);
@@ -184,48 +172,10 @@ function parseEstimateMinutes(raw: string | undefined): number | null {
   return Number.isFinite(bare) && bare > 0 ? Math.round(bare) : null;
 }
 
-const PRIORITY_MAP: Record<string, "URGENT" | "HIGH" | "MEDIUM" | "LOW" | "NO_PRIORITY"> = {
-  urgent: "URGENT",
-  "1": "URGENT",
-  high: "HIGH",
-  "2": "HIGH",
-  normal: "MEDIUM",
-  medium: "MEDIUM",
-  "3": "MEDIUM",
-  low: "LOW",
-  "4": "LOW",
-};
-
 function parsePriority(raw: string | undefined) {
   const value = raw?.trim().toLowerCase();
   if (!value) return "NO_PRIORITY" as const;
   return PRIORITY_MAP[value] ?? ("NO_PRIORITY" as const);
-}
-
-/**
- * Places a ClickUp status on the SySpree pipeline. An exact name match wins; then a
- * few well-known ClickUp defaults; otherwise the task lands on "Open" so nothing is
- * silently filed as finished.
- */
-function mapStatus(raw: string | undefined, states: Array<{ id: string; name: string; category: string }>) {
-  const value = norm(raw ?? "");
-  const byName = states.find((s) => norm(s.name) === value);
-  if (byName) return byName;
-
-  const started = (needle: string) => value.includes(needle);
-  if (started("complete") || started("closed") || started("done")) {
-    return states.find((s) => s.category === "COMPLETED") ?? states[0];
-  }
-  if (started("review") || started("qa")) {
-    return states.find((s) => norm(s.name).includes("review")) ?? states[0];
-  }
-  if (started("design") || started("figma")) {
-    return states.find((s) => norm(s.name).includes("design")) ?? states[0];
-  }
-  if (started("progress") || started("doing") || started("dev") || started("active")) {
-    return states.find((s) => norm(s.name).includes("progress")) ?? states[0];
-  }
-  return states.find((s) => s.category === "UNSTARTED") ?? states[0];
 }
 
 /** Splits ClickUp's comma-or-semicolon separated multi-value cells. */
@@ -234,23 +184,6 @@ function splitList(raw: string | undefined): string[] {
     .split(/[,;]/)
     .map((s) => s.trim().replace(/^["'\[]+|["'\]]+$/g, ""))
     .filter(Boolean);
-}
-
-/**
- * Derives a short list key ("WEB", "AMC") from a list name, since Flowspace shows
- * it in every task reference (WEB-14). Uniqueness is settled by the caller.
- */
-function deriveKey(name: string): string {
-  const words = name.replace(/[^a-zA-Z0-9 ]/g, " ").split(/\s+/).filter(Boolean);
-  if (!words.length) return "LST";
-  const initials = words.map((w) => w[0]).join("").toUpperCase();
-  if (initials.length >= 3) return initials.slice(0, 4);
-  return words[0].slice(0, 4).toUpperCase();
-}
-
-function flag(args: string[], name: string): string | undefined {
-  const raw = args.find((a) => a.startsWith(`--${name}=`));
-  return raw?.slice(name.length + 3).trim() || undefined;
 }
 
 // ───────────────────────── the import ─────────────────────────
@@ -517,18 +450,7 @@ async function main() {
         title: row.title,
         // Stored as a Tiptap doc so it opens in the rich-text editor rather than
         // appearing as a raw string the editor has to migrate on first open.
-        description: row.description
-          ? {
-              type: "doc",
-              content: row.description
-                .split(/\r?\n/)
-                .map((line) =>
-                  line.trim()
-                    ? { type: "paragraph", content: [{ type: "text", text: line }] }
-                    : { type: "paragraph" },
-                ),
-            }
-          : undefined,
+        description: row.description ? textToDoc(row.description) : undefined,
         priority: parsePriority(row.priority),
         startDate: startDate ?? undefined,
         dueDate: dueDate ?? undefined,
