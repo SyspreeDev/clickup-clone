@@ -62,6 +62,8 @@ export interface TaskSummary {
   workflowState: { id: string; name: string; color: string; category: string };
   milestone: { id: string; name: string } | null;
   _count: { subtasks: number; comments: number; attachments: number; checklists: number };
+  /** Only present on endpoints that span multiple projects, e.g. listMyTasks. */
+  project?: { id: string; name: string; key: string };
 }
 
 export interface TaskDetail extends TaskSummary {
