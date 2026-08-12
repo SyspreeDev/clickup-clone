@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
 
 const HIGHLIGHTS = [
@@ -8,6 +9,11 @@ const HIGHLIGHTS = [
 ];
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
+  // Public access mode auto-signs everyone in — the login/signup screens never render.
+  if (process.env.NEXT_PUBLIC_PUBLIC_ACCESS_MODE === "true") {
+    redirect("/redirect");
+  }
+
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
       <div className="relative hidden flex-col justify-between overflow-hidden bg-foreground p-10 text-background lg:flex">

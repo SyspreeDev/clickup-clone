@@ -104,6 +104,22 @@ export async function login(input: LoginInput) {
   return { user: publicUser(user), ...tokens };
 }
 
+/**
+ * Mints a real session for the fixed account configured by PUBLIC_ACCESS_EMAIL,
+ * with no password check at all. Only reachable when PUBLIC_ACCESS_MODE is on —
+ * an explicit per-environment opt-in, never a code default. See env.ts.
+ */
+export async function publicSession() {
+  if (!env.publicAccessMode || !env.publicAccessEmail) {
+    throw new BadRequestError("Public access mode is not enabled");
+  }
+  const user = await prisma.user.findUnique({ where: { email: env.publicAccessEmail } });
+  if (!user) throw new UnauthorizedError("Configured public access account not found");
+
+  const tokens = await issueTokenPair(user.id, user.email);
+  return { user: await userWithWorkspaces(user.id), ...tokens };
+}
+
 export async function refresh(refreshToken: string) {
   let payload;
   try {

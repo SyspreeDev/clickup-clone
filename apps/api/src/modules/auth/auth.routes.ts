@@ -17,6 +17,7 @@ export const authRouter: Router = Router();
 
 authRouter.post("/register", validateBody(registerSchema), asyncHandler(authController.register));
 authRouter.post("/login", validateBody(loginSchema), asyncHandler(authController.login));
+authRouter.post("/public-session", asyncHandler(authController.publicSession));
 authRouter.post("/refresh", asyncHandler(authController.refresh));
 authRouter.post("/logout", asyncHandler(authController.logout));
 authRouter.get("/verify-email/:token", asyncHandler(authController.verifyEmail));

@@ -7,7 +7,14 @@ import { createQueryClient } from "@/lib/query-client";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { useAuthStore } from "@/stores/auth-store";
 import { refreshAccessToken } from "@/lib/api-client";
-import { getMe } from "@/lib/queries/auth";
+import { getMe, publicSession } from "@/lib/queries/auth";
+
+/**
+ * Off by default everywhere. When an environment sets this at build time, anyone
+ * who lands here with no session is auto-signed-in server-side — see
+ * apps/api PUBLIC_ACCESS_MODE. A deliberate, explicit per-environment opt-in.
+ */
+const PUBLIC_ACCESS_MODE = process.env.NEXT_PUBLIC_PUBLIC_ACCESS_MODE === "true";
 
 function AuthBootstrap({ children }: { children: React.ReactNode }) {
   const setStatus = useAuthStore((s) => s.setStatus);
@@ -21,6 +28,19 @@ function AuthBootstrap({ children }: { children: React.ReactNode }) {
       const token = await refreshAccessToken();
       if (cancelled) return;
       if (!token) {
+        if (PUBLIC_ACCESS_MODE) {
+          try {
+            const result = await publicSession();
+            if (cancelled) return;
+            setSession(result.accessToken, null);
+            const user = await getMe();
+            if (cancelled) return;
+            setSession(result.accessToken, user);
+            return;
+          } catch {
+            // Falls through to unauthenticated — e.g. the configured account is missing.
+          }
+        }
         setStatus("unauthenticated");
         return;
       }

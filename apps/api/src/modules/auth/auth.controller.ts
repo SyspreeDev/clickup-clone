@@ -31,6 +31,12 @@ export async function login(req: Request, res: Response) {
   res.json({ user: result.user, accessToken: result.accessToken });
 }
 
+export async function publicSession(req: Request, res: Response) {
+  const result = await authService.publicSession();
+  setRefreshCookie(res, result.refreshToken);
+  res.json({ user: result.user, accessToken: result.accessToken });
+}
+
 export async function refresh(req: Request, res: Response) {
   const token = req.cookies?.[REFRESH_COOKIE];
   if (!token) throw new UnauthorizedError("Missing refresh token");
