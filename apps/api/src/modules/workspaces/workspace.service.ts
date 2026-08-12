@@ -187,3 +187,31 @@ export async function getDashboard(workspaceId: string, userId: string) {
     upcomingMeetings,
   };
 }
+
+/**
+ * Every task across every space/list in the workspace, deliberately NOT run
+ * through accessibleProjectWhere — this is the one view every member sees in
+ * full regardless of team membership, by explicit product decision. Used for
+ * the workspace-wide "Clients" view.
+ */
+export async function listAllTasks(workspaceId: string) {
+  return prisma.task.findMany({
+    where: { project: { workspaceId, isArchived: false }, isArchived: false },
+    include: {
+      assignees: { include: { user: { select: { id: true, name: true, avatarUrl: true } } } },
+      taskLabels: { include: { label: true } },
+      workflowState: true,
+      milestone: true,
+      _count: { select: { subtasks: true, comments: true, attachments: true, checklists: true } },
+      project: {
+        select: {
+          id: true,
+          name: true,
+          key: true,
+          team: { select: { id: true, name: true, color: true } },
+        },
+      },
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+}

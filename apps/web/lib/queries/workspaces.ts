@@ -1,5 +1,6 @@
 import { api } from "@/lib/api-client";
 import type { CreateWorkspaceInput, UpdateWorkspaceInput, InviteMemberInput } from "@repo/shared-types";
+import type { TaskSummary } from "@/lib/queries/tasks";
 
 export interface Workspace {
   id: string;
@@ -45,6 +46,12 @@ export const getWorkspace = (workspaceId: string) => api.get<Workspace>(`/api/wo
 export const updateWorkspace = (workspaceId: string, input: UpdateWorkspaceInput) =>
   api.patch<Workspace>(`/api/workspaces/${workspaceId}`, input);
 export const getDashboard = (workspaceId: string) => api.get<DashboardData>(`/api/workspaces/${workspaceId}/dashboard`);
+
+/** A task from any space/list in the workspace — this endpoint deliberately skips team-based scoping. */
+export type WorkspaceTaskItem = Omit<TaskSummary, "project"> & {
+  project: { id: string; name: string; key: string; team: { id: string; name: string; color: string | null } | null };
+};
+export const getAllTasks = (workspaceId: string) => api.get<WorkspaceTaskItem[]>(`/api/workspaces/${workspaceId}/all-tasks`);
 
 export const listMembers = (workspaceId: string) => api.get<WorkspaceMember[]>(`/api/workspaces/${workspaceId}/members`);
 export const inviteMember = (workspaceId: string, input: InviteMemberInput) =>

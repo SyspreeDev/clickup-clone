@@ -46,3 +46,5 @@ workspaceRouter.delete(
 );
 
 workspaceRouter.get("/workspaces/:workspaceId/dashboard", requireWorkspaceRole("GUEST"), asyncHandler(controller.dashboard));
+// Deliberately workspace-wide, not team-scoped — every member sees every space's tasks here.
+workspaceRouter.get("/workspaces/:workspaceId/all-tasks", requireWorkspaceRole("GUEST"), asyncHandler(controller.allTasks));

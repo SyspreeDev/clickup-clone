@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   CheckSquare,
   Users2,
+  Building2,
   MessagesSquare,
   CalendarClock,
   Settings,
@@ -77,6 +78,7 @@ export function Sidebar({ workspaceId }: { workspaceId: string }) {
   const nav = [
     { href: base, icon: LayoutDashboard, label: "Dashboard" },
     { href: `${base}/my-tasks`, icon: CheckSquare, label: "My Tasks" },
+    { href: `${base}/clients`, icon: Building2, label: "Clients" },
     { href: `${base}/teams`, icon: Users2, label: "Spaces" },
     { href: `${base}/chat`, icon: MessagesSquare, label: "Chat" },
     { href: `${base}/meetings`, icon: CalendarClock, label: "Meetings" },
@@ -85,7 +87,10 @@ export function Sidebar({ workspaceId }: { workspaceId: string }) {
   async function handleLogout() {
     await logoutRequest().catch(() => null);
     clear();
-    router.push("/login");
+    // A full reload (not router.push) so the root layout's auth bootstrap re-runs.
+    // In public access mode there's no login screen to land on — this re-establishes
+    // the shared session instead of bouncing between /login and /redirect forever.
+    window.location.href = "/";
   }
 
   return (
