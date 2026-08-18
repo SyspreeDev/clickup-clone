@@ -24,10 +24,17 @@ export function KpiCard({
   href?: string;
 }) {
   const accentClass = {
-    primary: "bg-primary/10 text-primary",
-    success: "bg-success/10 text-success",
-    destructive: "bg-destructive/10 text-destructive",
-    muted: "bg-muted text-muted-foreground",
+    primary: "bg-gradient-to-br from-primary/25 to-primary/10 text-primary",
+    success: "bg-gradient-to-br from-success/25 to-success/10 text-success",
+    destructive: "bg-gradient-to-br from-destructive/25 to-destructive/10 text-destructive",
+    muted: "bg-gradient-to-br from-muted-foreground/15 to-muted-foreground/5 text-muted-foreground",
+  }[accent ?? "primary"];
+
+  const ringClass = {
+    primary: "group-hover:ring-primary/20",
+    success: "group-hover:ring-success/20",
+    destructive: "group-hover:ring-destructive/20",
+    muted: "group-hover:ring-muted-foreground/15",
   }[accent ?? "primary"];
 
   const content = (
@@ -35,8 +42,10 @@ export function KpiCard({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25, delay: index * 0.05, ease: "easeOut" }}
+      whileHover={{ y: -2 }}
       className={cn(
-        "rounded-2xl border border-border bg-card p-4 shadow-soft transition-shadow hover:shadow-soft-lg",
+        "group rounded-2xl border border-border bg-card p-4 shadow-soft ring-1 ring-transparent transition-all hover:shadow-soft-lg",
+        ringClass,
         href && "cursor-pointer",
       )}
     >
@@ -49,11 +58,11 @@ export function KpiCard({
             </span>
           )}
         </span>
-        <span className={cn("flex h-8 w-8 items-center justify-center rounded-lg", accentClass)}>
+        <span className={cn("flex h-9 w-9 items-center justify-center rounded-xl transition-transform group-hover:scale-105", accentClass)}>
           <Icon className="h-4 w-4" />
         </span>
       </div>
-      <p className="mt-3 text-2xl font-semibold tracking-tight">{value}</p>
+      <p className="mt-3 text-2xl font-bold tracking-tight">{value}</p>
     </motion.div>
   );
 

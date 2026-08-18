@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { TopNav } from "@/components/layout/top-nav";
 import { KpiCard } from "@/components/dashboard/kpi-card";
-import { ProductivityChart } from "@/components/dashboard/productivity-chart";
+import { TaskOverviewChart } from "@/components/dashboard/task-overview-chart";
 import { MiniCalendar } from "@/components/dashboard/mini-calendar";
 import { AiInsightsCard } from "@/components/dashboard/ai-insights-card";
 import { MyTasksWidget } from "@/components/dashboard/my-tasks-widget";
@@ -31,6 +31,7 @@ import { getDashboard } from "@/lib/queries/workspaces";
 import { listMyTasks } from "@/lib/queries/tasks";
 import { useCommandPaletteStore } from "@/stores/command-palette-store";
 import { useAuthStore } from "@/stores/auth-store";
+import { cn } from "@/lib/utils";
 
 function activityLabel(action: string) {
   return action
@@ -72,19 +73,22 @@ export default function WorkspaceDashboardPage({ params }: { params: Promise<{ w
     (t) => t.dueDate && isPast(new Date(t.dueDate)) && t.workflowState.category !== "COMPLETED" && t.workflowState.category !== "CANCELLED",
   );
 
-  const totalTracked = (data?.kpis.completedTasks ?? 0) + (data?.kpis.pendingTasks ?? 0);
-  const completionRate = totalTracked > 0 ? Math.round(((data?.kpis.completedTasks ?? 0) / totalTracked) * 100) : null;
-
   return (
     <>
       <TopNav title="Dashboard" />
       <div className="flex-1 overflow-y-auto scrollbar-thin">
         <div className="mx-auto max-w-6xl space-y-6 p-6">
-          <div>
-            <h2 className="text-xl font-semibold tracking-tight">
-              {greeting()}{firstName ? `, ${firstName}` : ""} 👋
-            </h2>
-            <p className="text-sm text-muted-foreground">{format(new Date(), "EEEE, MMMM d")} — here&apos;s what&apos;s happening.</p>
+          <div className="relative overflow-hidden rounded-2xl border border-border bg-card px-6 py-5">
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{ background: "radial-gradient(circle at 12% 0%, hsl(var(--primary) / 0.14), transparent 55%)" }}
+            />
+            <div className="relative flex flex-col gap-1">
+              <h2 className="text-xl font-semibold tracking-tight">
+                {greeting()}{firstName ? `, ${firstName}` : ""} 👋
+              </h2>
+              <p className="text-sm text-muted-foreground">{format(new Date(), "EEEE, MMMM d")} — here&apos;s what&apos;s happening.</p>
+            </div>
           </div>
 
           {overdueTasks.length > 0 && (
@@ -167,23 +171,14 @@ export default function WorkspaceDashboardPage({ params }: { params: Promise<{ w
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <Card className="lg:col-span-2">
-              <CardHeader className="flex-row items-center justify-between space-y-0">
-                <CardTitle>Team productivity</CardTitle>
-                {completionRate !== null && (
-                  <span className="text-sm font-medium text-muted-foreground">
-                    <span className="text-success">{completionRate}%</span> completed
-                  </span>
-                )}
+              <CardHeader>
+                <CardTitle>Task overview</CardTitle>
               </CardHeader>
               <CardContent>
                 {data ? (
-                  <ProductivityChart
-                    completed={data.kpis.completedTasks}
-                    pending={data.kpis.pendingTasks}
-                    myTasks={data.kpis.myTasks}
-                  />
+                  <TaskOverviewChart completed={data.kpis.completedTasks} pending={data.kpis.pendingTasks} />
                 ) : (
-                  <Skeleton className="h-64 w-full" />
+                  <Skeleton className="h-48 w-full" />
                 )}
               </CardContent>
             </Card>
@@ -192,29 +187,33 @@ export default function WorkspaceDashboardPage({ params }: { params: Promise<{ w
               <CardHeader>
                 <CardTitle>Quick actions</CardTitle>
               </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-2">
-                <Button variant="secondary" className="h-auto flex-col gap-1.5 py-3" onClick={() => openPalette()}>
-                  <Plus className="h-4 w-4" />
-                  <span className="text-xs">New task</span>
-                </Button>
-                <Link href={`${base}/projects/new`}>
-                  <Button variant="secondary" className="h-auto w-full flex-col gap-1.5 py-3">
-                    <FolderKanban className="h-4 w-4" />
-                    <span className="text-xs">New project</span>
-                  </Button>
-                </Link>
-                <Link href={`${base}/teams`}>
-                  <Button variant="secondary" className="h-auto w-full flex-col gap-1.5 py-3">
-                    <Users2 className="h-4 w-4" />
-                    <span className="text-xs">Invite team</span>
-                  </Button>
-                </Link>
-                <Link href={`${base}/meetings`}>
-                  <Button variant="secondary" className="h-auto w-full flex-col gap-1.5 py-3">
-                    <CalendarClock className="h-4 w-4" />
-                    <span className="text-xs">Schedule meeting</span>
-                  </Button>
-                </Link>
+              <CardContent className="grid grid-cols-2 gap-2.5">
+                {[
+                  { label: "New task", icon: Plus, onClick: () => openPalette(), accent: "bg-primary/10 text-primary" },
+                  { label: "New project", icon: FolderKanban, href: `${base}/projects/new`, accent: "bg-blue-500/10 text-blue-500" },
+                  { label: "Invite team", icon: Users2, href: `${base}/teams`, accent: "bg-success/10 text-success" },
+                  { label: "Schedule meeting", icon: CalendarClock, href: `${base}/meetings`, accent: "bg-amber-500/10 text-amber-500" },
+                ].map((action) => {
+                  const inner = (
+                    <Button
+                      variant="secondary"
+                      className="h-auto w-full flex-col gap-2 py-4 transition-transform hover:-translate-y-0.5"
+                      onClick={action.onClick}
+                    >
+                      <span className={cn("flex h-8 w-8 items-center justify-center rounded-lg", action.accent)}>
+                        <action.icon className="h-4 w-4" />
+                      </span>
+                      <span className="text-xs">{action.label}</span>
+                    </Button>
+                  );
+                  return action.href ? (
+                    <Link key={action.label} href={action.href}>
+                      {inner}
+                    </Link>
+                  ) : (
+                    <span key={action.label}>{inner}</span>
+                  );
+                })}
               </CardContent>
             </Card>
           </div>
