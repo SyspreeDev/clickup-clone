@@ -101,10 +101,10 @@ export async function inviteMember(workspaceId: string, input: InviteMemberInput
 
   await emailProvider.send({
     to: input.email,
-    subject: `${inviterName} invited you to ${workspace.name} on Flowspace`,
+    subject: `${inviterName} invited you to ${workspace.name} on Teamspree`,
     html: alreadyHasAccount
-      ? `<p>${inviterName} added you to <strong>${workspace.name}</strong> on Flowspace.</p><p><a href="${inviteLink}">Sign in to view it</a></p>`
-      : `<p>${inviterName} invited you to join <strong>${workspace.name}</strong> on Flowspace.</p><p><a href="${inviteLink}">Create your account to accept</a></p>`,
+      ? `<p>${inviterName} added you to <strong>${workspace.name}</strong> on Teamspree.</p><p><a href="${inviteLink}">Sign in to view it</a></p>`
+      : `<p>${inviterName} invited you to join <strong>${workspace.name}</strong> on Teamspree.</p><p><a href="${inviteLink}">Create your account to accept</a></p>`,
   });
 
   return { ...member, inviteLink, alreadyHasAccount, emailSent: emailIsLive };

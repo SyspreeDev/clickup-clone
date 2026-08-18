@@ -19,7 +19,7 @@ type StatusBucket = "ALL" | "OPEN" | "CLOSED";
 /**
  * Every task in every space/list in the workspace, in one table — deliberately not
  * scoped to the viewer's own teams. "Client" here means what it means everywhere
- * else in Flowspace: a task inside a delivery list, not a distinct data model.
+ * else in Teamspree: a task inside a delivery list, not a distinct data model.
  */
 export default function ClientsPage({ params }: { params: Promise<{ workspaceId: string }> }) {
   const { workspaceId } = use(params);

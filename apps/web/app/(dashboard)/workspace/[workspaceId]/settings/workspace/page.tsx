@@ -70,7 +70,7 @@ export default function WorkspaceSettingsPage({ params }: { params: Promise<{ wo
                   </div>
                   <div className="space-y-2">
                     <Label>Workspace URL</Label>
-                    <Input disabled value={`flowspace.app/${workspace?.slug}`} />
+                    <Input disabled value={`teamspree.app/${workspace?.slug}`} />
                   </div>
                   <Button type="submit" disabled={!isDirty || mutation.isPending}>
                     {mutation.isPending ? "Saving…" : "Save changes"}

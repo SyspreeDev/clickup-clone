@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Flowspace",
+  title: "Teamspree",
   description: "Premium project & team management, built for speed.",
 };
 

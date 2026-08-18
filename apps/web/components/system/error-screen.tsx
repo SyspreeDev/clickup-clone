@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const RELOAD_GUARD = "flowspace:stale-bundle-reloaded";
+const RELOAD_GUARD = "teamspree:stale-bundle-reloaded";
 
 /**
  * A deploy renames every content-hashed chunk. A tab that was open across the

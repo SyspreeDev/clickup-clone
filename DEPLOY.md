@@ -1,4 +1,4 @@
-# Deploying Flowspace
+# Deploying Teamspree
 
 Architecture: **Vercel** hosts the Next.js web app (`apps/web`). The Express +
 Socket.io API and PostgreSQL **cannot** run on Vercel — deploy those to
@@ -13,13 +13,13 @@ Secrets are already git-ignored (`apps/api/.env`, `apps/web/.env.local`). From t
 ```
 cd "/Users/apple/Downloads/ClickUp Clone "
 git add -A
-git commit -m "Flowspace: email, Zoom, Google OAuth + deploy config"
+git commit -m "Teamspree: email, Zoom, Google OAuth + deploy config"
 ```
 
 Create an empty repo on github.com (no README), then:
 
 ```
-git remote add origin https://github.com/<you>/flowspace.git
+git remote add origin https://github.com/<you>/teamspree.git
 git branch -M main
 git push -u origin main
 ```
@@ -38,11 +38,11 @@ git push -u origin main
    - `DATABASE_URL` = (reference the Railway Postgres variable)
    - `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` = new strong random strings
    - `NODE_ENV=production`
-   - `CORS_ORIGIN` = your Vercel URL (e.g. `https://flowspace.vercel.app`)
+   - `CORS_ORIGIN` = your Vercel URL (e.g. `https://teamspree.vercel.app`)
    - `ZOOM_ACCOUNT_ID`, `ZOOM_CLIENT_ID`, `ZOOM_CLIENT_SECRET`
    - (optional) `EMAIL_PROVIDER`, `RESEND_API_KEY`, `EMAIL_FROM`, `GOOGLE_*`
    - Do **not** set `CORS_ALLOW_ALL` in production.
-5. Deploy. Note the public API URL, e.g. `https://flowspace-api.up.railway.app`.
+5. Deploy. Note the public API URL, e.g. `https://teamspree-api.up.railway.app`.
 6. Seed data if needed: run `pnpm --filter api db:seed` as a one-off, or import your data.
 
 ---
@@ -52,7 +52,7 @@ git push -u origin main
 1. https://vercel.com → Add New → Project → import the GitHub repo.
 2. **Root Directory**: `apps/web`  (Vercel detects Next.js + the pnpm/Turborepo monorepo).
 3. Environment variables:
-   - `NEXT_PUBLIC_API_URL` = your Railway API URL (e.g. `https://flowspace-api.up.railway.app`)
+   - `NEXT_PUBLIC_API_URL` = your Railway API URL (e.g. `https://teamspree-api.up.railway.app`)
    - `NEXT_PUBLIC_SOCKET_URL` = same Railway API URL
 4. Deploy. Vercel gives you `https://<project>.vercel.app` — your public link.
 

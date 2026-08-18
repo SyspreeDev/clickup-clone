@@ -24,7 +24,7 @@ export function flag(args: string[], name: string): string | undefined {
 }
 
 /**
- * Derives a short list key ("WEB", "AMC") from a list name, since Flowspace shows it
+ * Derives a short list key ("WEB", "AMC") from a list name, since Teamspree shows it
  * in every task reference (WEB-14). Uniqueness is settled by the caller.
  */
 export function deriveKey(name: string): string {

@@ -1,4 +1,4 @@
-# Flowspace — Email, Zoom & Google OAuth setup
+# Teamspree — Email, Zoom & Google OAuth setup
 
 All three integrations are now implemented. Each needs credentials you generate
 from the provider, pasted into `apps/api/.env`. The API does **not** hot-reload —
@@ -35,12 +35,12 @@ You don't have a Resend account yet, so:
    ```
    EMAIL_PROVIDER=resend
    RESEND_API_KEY=re_xxxxxxxxxxxxxxxx
-   EMAIL_FROM=Flowspace <noreply@syspreedigital.com>
+   EMAIL_FROM=Teamspree <noreply@syspreedigital.com>
    ```
 
    `EMAIL_FROM` must be on your verified domain (or `onboarding@resend.dev` for the test path).
 5. Restart the API. Invites, email verification, and password resets now send real,
-   Flowspace-branded (orange) emails. If the key/domain is missing it safely falls
+   Teamspree-branded (orange) emails. If the key/domain is missing it safely falls
    back to logging the link in the terminal.
 
 ---
@@ -50,7 +50,7 @@ You don't have a Resend account yet, so:
 You have a Zoom Pro account, so:
 
 1. Go to **https://marketplace.zoom.us** → sign in → *Develop* → *Build App*.
-2. Choose **Server-to-Server OAuth** → name it (e.g. "Flowspace").
+2. Choose **Server-to-Server OAuth** → name it (e.g. "Teamspree").
 3. On the app's **App Credentials** page, copy:
    - **Account ID** → `ZOOM_ACCOUNT_ID`
    - **Client ID** → `ZOOM_CLIENT_ID`
@@ -65,7 +65,7 @@ You have a Zoom Pro account, so:
    ZOOM_CLIENT_SECRET=xxxxxxxx
    ```
 7. Restart the API. In *Schedule a meeting*, tick **"Generate a Zoom link
-   automatically"** — Flowspace creates a real Zoom meeting and attaches the join
+   automatically"** — Teamspree creates a real Zoom meeting and attaches the join
    link (shown as "Join Zoom meeting"). Leaving it unticked keeps the manual
    paste-your-own-link behavior. If Zoom env vars are absent, the toggle silently
    no-ops and the manual field is used.

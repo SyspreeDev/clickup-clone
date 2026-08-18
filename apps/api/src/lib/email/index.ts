@@ -11,7 +11,7 @@ export interface EmailProvider {
 }
 
 /**
- * Wraps raw body HTML in a branded Flowspace shell (orange #ff9412 accent).
+ * Wraps raw body HTML in a branded Teamspree shell (orange #ff9412 accent).
  * Callers pass simple HTML; this gives every outbound email a consistent look.
  */
 export function renderBrandedEmail(bodyHtml: string): string {
@@ -24,7 +24,7 @@ export function renderBrandedEmail(bodyHtml: string): string {
           <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
             <tr>
               <td style="background:#ff9412;padding:20px 32px;">
-                <span style="color:#ffffff;font-size:20px;font-weight:700;letter-spacing:-0.02em;">Flowspace</span>
+                <span style="color:#ffffff;font-size:20px;font-weight:700;letter-spacing:-0.02em;">Teamspree</span>
               </td>
             </tr>
             <tr>
@@ -34,7 +34,7 @@ export function renderBrandedEmail(bodyHtml: string): string {
             </tr>
             <tr>
               <td style="padding:20px 32px;border-top:1px solid #eceef1;color:#8a94a6;font-size:12px;line-height:1.5;">
-                Sent by Flowspace · SySpree Digital Pvt Ltd
+                Sent by Teamspree · SySpree Digital Pvt Ltd
               </td>
             </tr>
           </table>

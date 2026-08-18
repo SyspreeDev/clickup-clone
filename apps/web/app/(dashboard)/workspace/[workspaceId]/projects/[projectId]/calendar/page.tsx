@@ -54,7 +54,7 @@ export default function CalendarViewPage({ params }: { params: Promise<{ workspa
   return (
     <>
       <TopNav />
-      <div className="flex-1 overflow-y-auto p-4 [--rbc-today:hsl(var(--accent))] flowspace-calendar">
+      <div className="flex-1 overflow-y-auto p-4 [--rbc-today:hsl(var(--accent))] teamspree-calendar">
         <Calendar
           localizer={localizer}
           events={events}

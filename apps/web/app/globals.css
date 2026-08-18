@@ -108,7 +108,7 @@
   }
 }
 
-.flowspace-calendar {
+.teamspree-calendar {
   --cal-bg: hsl(var(--card));
   --cal-border: hsl(var(--border));
   --cal-text: hsl(var(--foreground));
@@ -116,48 +116,48 @@
   --cal-today: hsl(var(--accent));
   color: var(--cal-text);
 }
-.flowspace-calendar .rbc-toolbar {
+.teamspree-calendar .rbc-toolbar {
   color: var(--cal-text);
   margin-bottom: 1rem;
 }
-.flowspace-calendar .rbc-toolbar button {
+.teamspree-calendar .rbc-toolbar button {
   color: var(--cal-text);
   border-color: var(--cal-border);
   border-radius: 0.5rem;
 }
-.flowspace-calendar .rbc-toolbar button:hover,
-.flowspace-calendar .rbc-toolbar button.rbc-active {
+.teamspree-calendar .rbc-toolbar button:hover,
+.teamspree-calendar .rbc-toolbar button.rbc-active {
   background: hsl(var(--primary));
   color: hsl(var(--primary-foreground));
   border-color: hsl(var(--primary));
 }
-.flowspace-calendar .rbc-month-view,
-.flowspace-calendar .rbc-time-view,
-.flowspace-calendar .rbc-header,
-.flowspace-calendar .rbc-day-bg,
-.flowspace-calendar .rbc-month-row,
-.flowspace-calendar .rbc-time-content,
-.flowspace-calendar .rbc-timeslot-group {
+.teamspree-calendar .rbc-month-view,
+.teamspree-calendar .rbc-time-view,
+.teamspree-calendar .rbc-header,
+.teamspree-calendar .rbc-day-bg,
+.teamspree-calendar .rbc-month-row,
+.teamspree-calendar .rbc-time-content,
+.teamspree-calendar .rbc-timeslot-group {
   border-color: var(--cal-border) !important;
   background: var(--cal-bg);
 }
-.flowspace-calendar .rbc-off-range-bg {
+.teamspree-calendar .rbc-off-range-bg {
   background: hsl(var(--muted) / 0.4);
 }
-.flowspace-calendar .rbc-today {
+.teamspree-calendar .rbc-today {
   background: var(--cal-today);
 }
-.flowspace-calendar .rbc-header {
+.teamspree-calendar .rbc-header {
   padding: 6px 0;
   font-size: 12px;
   font-weight: 500;
   color: var(--cal-muted);
 }
-.flowspace-calendar .rbc-date-cell {
+.teamspree-calendar .rbc-date-cell {
   color: var(--cal-text);
   font-size: 12px;
   padding: 4px 6px;
 }
-.flowspace-calendar .rbc-off-range {
+.teamspree-calendar .rbc-off-range {
   color: var(--cal-muted);
 }

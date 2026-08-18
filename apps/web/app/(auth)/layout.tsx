@@ -26,7 +26,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         />
         <Link href="/" className="relative z-10 flex items-center gap-2 text-lg font-semibold">
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">F</span>
-          Flowspace
+          Teamspree
         </Link>
         <div className="relative z-10 space-y-6">
           <blockquote className="text-2xl font-medium leading-snug">
@@ -41,7 +41,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             ))}
           </ul>
         </div>
-        <p className="relative z-10 text-xs text-background/50">© {new Date().getFullYear()} Flowspace, Inc.</p>
+        <p className="relative z-10 text-xs text-background/50">© {new Date().getFullYear()} Teamspree, Inc.</p>
       </div>
       <div className="flex items-center justify-center p-6 sm:p-10">
         <div className="w-full max-w-sm">{children}</div>

@@ -11,7 +11,7 @@ export default function NotFound() {
       <p className="text-sm font-medium">Page not found</p>
       <p className="max-w-sm text-sm text-muted-foreground">The page you&apos;re looking for doesn&apos;t exist or was moved.</p>
       <Button asChild>
-        <Link href="/redirect">Back to Flowspace</Link>
+        <Link href="/redirect">Back to Teamspree</Link>
       </Button>
     </div>
   );

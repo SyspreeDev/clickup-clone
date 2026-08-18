@@ -1,5 +1,5 @@
 /**
- * Pulls a whole ClickUp workspace into Flowspace directly over the ClickUp API,
+ * Pulls a whole ClickUp workspace into Teamspree directly over the ClickUp API,
  * recreating Space → Folder → List → Task and, by default, comments, time logs,
  * checklists and subtasks. Prefer this over the CSV importer for a real migration:
  * a CSV export only gives assignee display names (not emails, so they can't be
@@ -18,7 +18,7 @@
  *
  *   --clickup-team=<id>   which ClickUp workspace to read; only needed if the
  *                         token can see more than one (the dry run lists them)
- *   --workspace=<slug>    target Flowspace workspace (required)
+ *   --workspace=<slug>    target Teamspree workspace (required)
  *   --owner=<email>       who owns anything created; defaults to the workspace owner
  *   --space=<name>        only import this one ClickUp space — a cheap first pass
  *   --list=<name>         further narrow to lists whose name contains this
@@ -36,17 +36,17 @@
  * and falls back to discovering lists by scanning every task the token can see, but
  * the real Space name isn't visible in that mode, so everything lands under one
  * placeholder Space (--space names it; otherwise "ClickUp Import"). Move lists to
- * their real Spaces afterward in Flowspace, or get a token with real Space access
+ * their real Spaces afterward in Teamspree, or get a token with real Space access
  * if you'd rather this run place them correctly the first time.
  *
- * Idempotent, matched by name/timestamp rather than a stored ClickUp id (Flowspace's
+ * Idempotent, matched by name/timestamp rather than a stored ClickUp id (Teamspree's
  * Task table has no external-id column): lists and tasks by name within their parent,
  * comments by (author, exact original timestamp), time entries by (user, exact start
  * time). A re-run only fills gaps for comments and time entries — append-only history
  * that's always safe to backfill onto a task that already exists. Everything else
  * about an existing task (its fields, labels, assignees, checklists, attachments) is
  * left exactly as it is and not revisited, in case someone has since edited it in
- * Flowspace; run again with --attachments after an --attachments-less first pass and
+ * Teamspree; run again with --attachments after an --attachments-less first pass and
  * nothing new will be added to tasks that already existed before that pass. Two
  * ClickUp tasks that happen to share a title in the same list will be treated as one
  * on a re-run — same risk profile as the CSV importer.
@@ -213,7 +213,7 @@ async function main() {
     process.exit(1);
   }
 
-  // Only members of *this* Flowspace workspace are eligible assignees — matching
+  // Only members of *this* Teamspree workspace are eligible assignees — matching
   // the CSV importer's rule that an assignee value must resolve to a real account.
   const members = await prisma.workspaceMember.findMany({
     where: { workspaceId: workspace.id },
@@ -235,7 +235,7 @@ async function main() {
   }
 
   console.log(`\nClickUp workspace: ${team.name} (${team.id})`);
-  console.log(`Flowspace target:  ${workspace.name} (${workspace.slug})`);
+  console.log(`Teamspree target:  ${workspace.name} (${workspace.slug})`);
   console.log(`Owner:             ${owner.name} <${owner.email}>`);
   console.log(
     `Including:         ${["closed tasks", withComments && "comments", withTime && "time logs", withChecklists && "checklists/subtasks", withAttachments && "attachments"].filter(Boolean).join(", ")}`,
@@ -279,7 +279,7 @@ async function main() {
         "scan of every task this token can see, grouped by its own folder/list. The real\n" +
         "Space name isn't visible in this mode, so everything lands under one placeholder\n" +
         `Space: "${spaceFilter ?? "ClickUp Import"}". Move lists into their real Spaces\n` +
-        "afterward in Flowspace, or ask whoever administers ClickUp for a token with real\n" +
+        "afterward in Teamspree, or ask whoever administers ClickUp for a token with real\n" +
         "Space access if you'd rather this run place them correctly the first time.\n",
     );
 
@@ -354,7 +354,7 @@ async function main() {
     comments: 0, timeEntries: 0, checklists: 0, checklistItems: 0, attachments: 0,
   };
   const unmatchedAssignees = new Set<string>();
-  /** ClickUp task id → Flowspace task id, for the parent-linking pass at the end. */
+  /** ClickUp task id → Teamspree task id, for the parent-linking pass at the end. */
   const idMap = new Map<string, string>();
   const pendingParents: Array<{ childId: string; clickupParentId: string }> = [];
 
@@ -585,7 +585,7 @@ async function main() {
         }
 
         // Comments and time entries are append-only history rather than fields a
-        // Flowspace user might have deliberately edited, so — unlike everything
+        // Teamspree user might have deliberately edited, so — unlike everything
         // above — they're worth backfilling even for a task that already existed,
         // which is what makes a re-run after a partial import actually fill gaps.
         // Each has its own timestamp-based fingerprint, so this stays idempotent.
@@ -604,7 +604,7 @@ async function main() {
             if (existingKey.has(key)) continue;
 
             // Attribute to the owner with the real author named inline when the
-            // ClickUp author has no matching Flowspace account, rather than losing
+            // ClickUp author has no matching Teamspree account, rather than losing
             // who actually wrote it.
             const attribution = memberByEmail.has(comment.user.email.toLowerCase())
               ? comment.comment_text
@@ -674,9 +674,9 @@ async function main() {
   );
   if (unmatchedAssignees.size) {
     console.log(
-      `\nThese ClickUp assignees have no matching Flowspace account in this workspace, so their tasks are unassigned:\n  ` +
+      `\nThese ClickUp assignees have no matching Teamspree account in this workspace, so their tasks are unassigned:\n  ` +
         `${[...unmatchedAssignees].join(", ")}\n` +
-        `Invite them in Flowspace and re-run, or assign by hand.`,
+        `Invite them in Teamspree and re-run, or assign by hand.`,
     );
   }
   console.log("");
