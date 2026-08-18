@@ -30,10 +30,16 @@ export function MiniCalendar({ markedDates = [] }: { markedDates?: Date[] }) {
       <div className="mb-2 flex items-center justify-between">
         <p className="text-sm font-medium">{format(month, "MMMM yyyy")}</p>
         <div className="flex items-center gap-1">
-          <button onClick={() => setMonth((m) => subMonths(m, 1))} className="rounded p-1 hover:bg-accent">
+          <button
+            onClick={() => setMonth((m) => subMonths(m, 1))}
+            className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
             <ChevronLeft className="h-3.5 w-3.5" />
           </button>
-          <button onClick={() => setMonth((m) => addMonths(m, 1))} className="rounded p-1 hover:bg-accent">
+          <button
+            onClick={() => setMonth((m) => addMonths(m, 1))}
+            className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
             <ChevronRight className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -50,8 +56,9 @@ export function MiniCalendar({ markedDates = [] }: { markedDates?: Date[] }) {
             <div
               key={day.toISOString()}
               className={cn(
-                "flex h-7 items-center justify-center rounded-md text-xs",
+                "flex h-7 items-center justify-center rounded-md text-xs transition-colors",
                 !isSameMonth(day, month) && "text-muted-foreground/40",
+                !isToday(day) && !marked && "hover:bg-muted",
                 isToday(day) && "bg-primary text-primary-foreground font-medium",
                 marked && !isToday(day) && "bg-primary/10 font-medium text-primary",
               )}

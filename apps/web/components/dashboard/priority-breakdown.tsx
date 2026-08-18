@@ -29,19 +29,25 @@ export function PriorityBreakdown({ tasks }: { tasks: TaskSummary[] }) {
   })).filter((c) => c.count > 0);
 
   return (
-    <div className="space-y-2.5">
-      {counts.map(({ priority, count }) => (
-        <div key={priority} className="flex items-center gap-2 text-sm">
-          <span className="w-20 shrink-0 truncate text-muted-foreground">{PRIORITY_CONFIG[priority].label}</span>
-          <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
-            <div
-              className={cn("h-full rounded-full", BAR_COLOR[priority])}
-              style={{ width: `${Math.max((count / total) * 100, 6)}%` }}
-            />
+    <div className="space-y-3">
+      {counts.map(({ priority, count }) => {
+        const { icon: Icon, label, className: iconClass } = PRIORITY_CONFIG[priority];
+        return (
+          <div key={priority} className="flex items-center gap-3 text-sm">
+            <span className="flex w-24 shrink-0 items-center gap-1.5 text-muted-foreground">
+              <Icon className={cn("h-3.5 w-3.5 shrink-0", iconClass)} />
+              <span className="truncate">{label}</span>
+            </span>
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+              <div
+                className={cn("h-full rounded-full transition-all", BAR_COLOR[priority])}
+                style={{ width: `${Math.max((count / total) * 100, 6)}%` }}
+              />
+            </div>
+            <span className="w-5 shrink-0 text-right font-semibold tabular-nums">{count}</span>
           </div>
-          <span className="w-5 shrink-0 text-right font-medium tabular-nums">{count}</span>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

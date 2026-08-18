@@ -33,14 +33,14 @@ export function MyTasksWidget({ tasks }: { tasks: TaskSummary[] }) {
   }
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-1.5">
       {visible.map((task) => {
         const overdue = task.dueDate && isPast(new Date(task.dueDate));
         return (
           <div
             key={task.id}
             onClick={() => openTask(task.id)}
-            className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-accent/50"
+            className="flex cursor-pointer items-center gap-3 rounded-xl border border-transparent px-2.5 py-2 text-sm transition-colors hover:border-border hover:bg-muted/40"
           >
             <PriorityIcon priority={task.priority} />
             <span className="min-w-0 flex-1 truncate font-medium">{task.title}</span>
@@ -48,7 +48,12 @@ export function MyTasksWidget({ tasks }: { tasks: TaskSummary[] }) {
               <span className="hidden shrink-0 truncate text-xs text-muted-foreground sm:inline">{task.project.name}</span>
             )}
             {task.dueDate ? (
-              <span className={cn("shrink-0 text-xs text-muted-foreground", overdue && "font-medium text-destructive")}>
+              <span
+                className={cn(
+                  "shrink-0 rounded-full px-2 py-0.5 text-xs",
+                  overdue ? "bg-destructive/10 font-medium text-destructive" : "bg-muted text-muted-foreground",
+                )}
+              >
                 {overdue ? "Overdue · " : ""}
                 {format(new Date(task.dueDate), "MMM d")}
               </span>

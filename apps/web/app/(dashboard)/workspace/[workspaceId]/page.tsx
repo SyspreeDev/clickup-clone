@@ -3,7 +3,7 @@
 import { use } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { formatDistanceToNow, format, isPast } from "date-fns";
+import { formatDistanceToNow, format, isPast, differenceInCalendarDays } from "date-fns";
 import {
   FolderKanban,
   Users2,
@@ -13,6 +13,13 @@ import {
   Plus,
   CalendarClock,
   AlertTriangle,
+  PieChart,
+  Zap,
+  ListChecks,
+  Flag,
+  History,
+  CalendarDays,
+  Video,
 } from "lucide-react";
 import { TopNav } from "@/components/layout/top-nav";
 import { KpiCard } from "@/components/dashboard/kpi-card";
@@ -22,6 +29,7 @@ import { AiInsightsCard } from "@/components/dashboard/ai-insights-card";
 import { MyTasksWidget } from "@/components/dashboard/my-tasks-widget";
 import { PriorityBreakdown } from "@/components/dashboard/priority-breakdown";
 import { ActivityIcon } from "@/components/dashboard/activity-icon";
+import { SectionIcon } from "@/components/dashboard/section-icon";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -171,7 +179,8 @@ export default function WorkspaceDashboardPage({ params }: { params: Promise<{ w
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <Card className="lg:col-span-2">
-              <CardHeader>
+              <CardHeader className="flex-row items-center gap-2.5 space-y-0">
+                <SectionIcon icon={PieChart} tone="primary" />
                 <CardTitle>Task overview</CardTitle>
               </CardHeader>
               <CardContent>
@@ -184,7 +193,8 @@ export default function WorkspaceDashboardPage({ params }: { params: Promise<{ w
             </Card>
 
             <Card>
-              <CardHeader>
+              <CardHeader className="flex-row items-center gap-2.5 space-y-0">
+                <SectionIcon icon={Zap} tone="amber" />
                 <CardTitle>Quick actions</CardTitle>
               </CardHeader>
               <CardContent className="grid grid-cols-2 gap-2.5">
@@ -221,7 +231,10 @@ export default function WorkspaceDashboardPage({ params }: { params: Promise<{ w
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <Card className="lg:col-span-2">
               <CardHeader className="flex-row items-center justify-between space-y-0">
-                <CardTitle>My tasks</CardTitle>
+                <div className="flex items-center gap-2.5">
+                  <SectionIcon icon={ListChecks} tone="primary" />
+                  <CardTitle>My tasks</CardTitle>
+                </div>
                 <Link href={`${base}/my-tasks`} className="text-xs font-medium text-primary hover:underline">
                   View all
                 </Link>
@@ -232,7 +245,8 @@ export default function WorkspaceDashboardPage({ params }: { params: Promise<{ w
             </Card>
 
             <Card>
-              <CardHeader>
+              <CardHeader className="flex-row items-center gap-2.5 space-y-0">
+                <SectionIcon icon={Flag} tone="destructive" />
                 <CardTitle>My workload by priority</CardTitle>
               </CardHeader>
               <CardContent>
@@ -243,27 +257,33 @@ export default function WorkspaceDashboardPage({ params }: { params: Promise<{ w
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <Card className="lg:col-span-2">
-              <CardHeader>
+              <CardHeader className="flex-row items-center gap-2.5 space-y-0">
+                <SectionIcon icon={History} tone="muted" />
                 <CardTitle>Recent activity</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent>
                 {!data?.recentActivity.length && <p className="text-sm text-muted-foreground">Nothing yet — activity will show up here.</p>}
-                {data?.recentActivity.map((a) => (
-                  <div key={a.id} className="flex items-start gap-3">
-                    <ActivityIcon action={a.action} />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm">
-                        <span className="font-medium">{a.actor.name}</span>{" "}
-                        <span className="text-muted-foreground">{activityLabel(a.action)} a {a.entityType.toLowerCase()}</span>
-                      </p>
-                      <p className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(a.createdAt), { addSuffix: true })}</p>
+                <div className="relative space-y-1">
+                  {data?.recentActivity.length ? (
+                    <div className="absolute bottom-2 left-[13px] top-2 w-px bg-border" aria-hidden />
+                  ) : null}
+                  {data?.recentActivity.map((a) => (
+                    <div key={a.id} className="relative flex items-start gap-3 rounded-xl px-1.5 py-2 transition-colors hover:bg-muted/40">
+                      <ActivityIcon action={a.action} className="relative z-[1] ring-4 ring-card" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm">
+                          <span className="font-medium">{a.actor.name}</span>{" "}
+                          <span className="text-muted-foreground">{activityLabel(a.action)} a {a.entityType.toLowerCase()}</span>
+                        </p>
+                        <p className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(a.createdAt), { addSuffix: true })}</p>
+                      </div>
+                      <Avatar className="h-6 w-6 shrink-0">
+                        <AvatarImage src={a.actor.avatarUrl ?? undefined} />
+                        <AvatarFallback className="text-[10px]">{a.actor.name[0]}</AvatarFallback>
+                      </Avatar>
                     </div>
-                    <Avatar className="h-6 w-6 shrink-0">
-                      <AvatarImage src={a.actor.avatarUrl ?? undefined} />
-                      <AvatarFallback className="text-[10px]">{a.actor.name[0]}</AvatarFallback>
-                    </Avatar>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </CardContent>
             </Card>
 
@@ -280,25 +300,37 @@ export default function WorkspaceDashboardPage({ params }: { params: Promise<{ w
               </Card>
 
               <Card>
-                <CardHeader>
+                <CardHeader className="flex-row items-center gap-2.5 space-y-0">
+                  <SectionIcon icon={CalendarDays} tone="amber" />
                   <CardTitle>Upcoming deadlines</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="space-y-2">
                   {!data?.upcomingDeadlines.length && <p className="text-sm text-muted-foreground">No deadlines this week.</p>}
-                  {data?.upcomingDeadlines.map((t) => (
-                    <div key={t.id} className="flex items-center justify-between gap-2 text-sm">
-                      <span className="truncate">{t.title}</span>
-                      <span className="shrink-0 text-xs text-muted-foreground">{format(new Date(t.dueDate), "MMM d")}</span>
-                    </div>
-                  ))}
+                  {data?.upcomingDeadlines.map((t) => {
+                    const daysAway = differenceInCalendarDays(new Date(t.dueDate), new Date());
+                    const soon = daysAway <= 1;
+                    return (
+                      <div
+                        key={t.id}
+                        className="flex items-center gap-2.5 rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-sm"
+                      >
+                        <span className={cn("h-2 w-2 shrink-0 rounded-full", soon ? "bg-destructive" : "bg-primary")} />
+                        <span className="min-w-0 flex-1 truncate">{t.title}</span>
+                        <span className={cn("shrink-0 text-xs", soon ? "font-medium text-destructive" : "text-muted-foreground")}>
+                          {format(new Date(t.dueDate), "MMM d")}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </CardContent>
               </Card>
 
               <Card>
-                <CardHeader>
+                <CardHeader className="flex-row items-center gap-2.5 space-y-0">
+                  <SectionIcon icon={Video} tone="blue" />
                   <CardTitle>Upcoming meetings</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="space-y-2">
                   {!data?.upcomingMeetings.length && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <CalendarClock className="h-4 w-4" />
@@ -306,9 +338,14 @@ export default function WorkspaceDashboardPage({ params }: { params: Promise<{ w
                     </div>
                   )}
                   {data?.upcomingMeetings.map((m) => (
-                    <div key={m.id} className="text-sm">
-                      <p className="font-medium">{m.title}</p>
-                      <p className="text-xs text-muted-foreground">{format(new Date(m.startTime), "MMM d, h:mm a")}</p>
+                    <div key={m.id} className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/30 px-3 py-2">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-blue-500/10 text-blue-500">
+                        <Video className="h-3.5 w-3.5" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{m.title}</p>
+                        <p className="text-xs text-muted-foreground">{format(new Date(m.startTime), "MMM d, h:mm a")}</p>
+                      </div>
                     </div>
                   ))}
                 </CardContent>
