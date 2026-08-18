@@ -55,3 +55,8 @@ export async function dashboard(req: Request, res: Response) {
   const data = await workspaceService.getDashboard(req.params.workspaceId, req.user.id);
   res.json(data);
 }
+
+export async function allTasks(req: Request, res: Response) {
+  const data = await workspaceService.listAllTasks(req.params.workspaceId);
+  res.json(data);
+}

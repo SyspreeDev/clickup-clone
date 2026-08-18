@@ -22,6 +22,8 @@ import { useProjectTasks } from "@/hooks/use-project-tasks";
 import { useQuery } from "@tanstack/react-query";
 import { getProject } from "@/lib/queries/projects";
 import type { TaskSummary } from "@/lib/queries/tasks";
+import { DEFAULT_TASK_FILTERS, TaskFilterBar, filterTasks } from "@/components/views/task-filter-bar";
+import { useAuthStore } from "@/stores/auth-store";
 
 const columnHelper = createColumnHelper<TaskSummary>();
 
@@ -31,6 +33,10 @@ export default function TableViewPage({ params }: { params: Promise<{ workspaceI
   const { data: tasks, isLoading } = useProjectTasks(projectId);
   const openTask = useTaskDetailStore((s) => s.openTask);
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [filters, setFilters] = useState(DEFAULT_TASK_FILTERS);
+  const userId = useAuthStore((s) => s.user?.id);
+  const allTasks = tasks ?? [];
+  const filteredTasks = filterTasks(allTasks, filters, userId);
 
   const columns = [
     columnHelper.accessor((row) => `${project?.key ?? ""}-${row.number}`, {
@@ -92,7 +98,7 @@ export default function TableViewPage({ params }: { params: Promise<{ workspaceI
   ];
 
   const table = useReactTable({
-    data: tasks ?? [],
+    data: filteredTasks,
     columns,
     state: { sorting },
     onSortingChange: setSorting,
@@ -116,6 +122,7 @@ export default function TableViewPage({ params }: { params: Promise<{ workspaceI
   return (
     <>
       <TopNav />
+      <TaskFilterBar filters={filters} onChange={setFilters} totalCount={allTasks.length} filteredCount={filteredTasks.length} />
       <div className="flex-1 overflow-auto scrollbar-thin">
         <table className="w-full text-sm">
           <thead className="sticky top-0 bg-background">
@@ -152,7 +159,10 @@ export default function TableViewPage({ params }: { params: Promise<{ workspaceI
             ))}
           </tbody>
         </table>
-        {!tasks?.length && <p className="p-6 text-center text-sm text-muted-foreground">No tasks yet.</p>}
+        {!allTasks.length && <p className="p-6 text-center text-sm text-muted-foreground">No tasks yet.</p>}
+        {!!allTasks.length && !filteredTasks.length && (
+          <p className="p-6 text-center text-sm text-muted-foreground">No tasks match these filters.</p>
+        )}
       </div>
       <TaskDetailDialog />
     </>

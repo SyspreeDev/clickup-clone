@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { ChevronDown, ChevronRight, Folder, FolderOpen, Hash, Lock, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NewListButton } from "@/components/hierarchy/new-list-dialog";
+import { MoveListButton } from "@/components/hierarchy/move-list-dialog";
 import type { TreeFolder, TreeList, TreeSpace } from "@/lib/queries/hierarchy";
 
 /** One list row — the leaf of Space → Folder → List. */
@@ -13,35 +14,40 @@ function ListRow({
   list,
   base,
   depth,
+  workspaceId,
+  allSpaces,
   onNavigate,
 }: {
   list: TreeList;
   base: string;
   depth: number;
+  workspaceId: string;
+  allSpaces: TreeSpace[];
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
   const active = pathname?.startsWith(`${base}/projects/${list.id}`) ?? false;
 
   return (
-    <Link
-      href={`${base}/projects/${list.id}/list`}
-      onClick={onNavigate}
-      style={{ paddingLeft: `${depth * 12 + 10}px` }}
-      className={cn(
-        "group flex items-center gap-2 rounded-lg py-1.5 pr-2 text-sm transition-colors",
-        active
-          ? "bg-primary/10 font-medium text-primary"
-          : "text-sidebar-foreground/80 hover:bg-sidebar-border/60 hover:text-sidebar-foreground",
-      )}
-      title={list.name}
-    >
-      <Hash className="h-3.5 w-3.5 shrink-0" style={{ color: list.color ?? undefined }} />
-      <span className="truncate">{list.name}</span>
+    <div className="group/row flex items-center gap-1 rounded-lg pr-1.5 transition-colors hover:bg-sidebar-border/60">
+      <Link
+        href={`${base}/projects/${list.id}/list`}
+        onClick={onNavigate}
+        style={{ paddingLeft: `${depth * 12 + 10}px` }}
+        className={cn(
+          "flex min-w-0 flex-1 items-center gap-2 rounded-lg py-1.5 text-sm transition-colors",
+          active ? "font-medium text-primary" : "text-sidebar-foreground/80 hover:text-sidebar-foreground",
+        )}
+        title={list.name}
+      >
+        <Hash className="h-3.5 w-3.5 shrink-0" style={{ color: list.color ?? undefined }} />
+        <span className="truncate">{list.name}</span>
+      </Link>
       {list._count.tasks > 0 && (
-        <span className="ml-auto shrink-0 text-[11px] tabular-nums text-muted-foreground">{list._count.tasks}</span>
+        <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">{list._count.tasks}</span>
       )}
-    </Link>
+      <MoveListButton workspaceId={workspaceId} list={list} spaces={allSpaces} />
+    </div>
   );
 }
 
@@ -49,12 +55,14 @@ function FolderRow({
   folder,
   spaceId,
   workspaceId,
+  allSpaces,
   base,
   onNavigate,
 }: {
   folder: TreeFolder;
   spaceId: string;
   workspaceId: string;
+  allSpaces: TreeSpace[];
   base: string;
   onNavigate?: () => void;
 }) {
@@ -93,7 +101,15 @@ function FolderRow({
       {open &&
         (folder.lists.length > 0 ? (
           folder.lists.map((list) => (
-            <ListRow key={list.id} list={list} base={base} depth={3} onNavigate={onNavigate} />
+            <ListRow
+              key={list.id}
+              list={list}
+              base={base}
+              depth={3}
+              workspaceId={workspaceId}
+              allSpaces={allSpaces}
+              onNavigate={onNavigate}
+            />
           ))
         ) : (
           <p className="py-1 pl-[58px] text-xs text-muted-foreground">Empty folder</p>
@@ -105,11 +121,13 @@ function FolderRow({
 function SpaceRow({
   space,
   workspaceId,
+  allSpaces,
   base,
   onNavigate,
 }: {
   space: TreeSpace;
   workspaceId: string;
+  allSpaces: TreeSpace[];
   base: string;
   onNavigate?: () => void;
 }) {
@@ -153,12 +171,21 @@ function SpaceRow({
               folder={folder}
               spaceId={space.id}
               workspaceId={workspaceId}
+              allSpaces={allSpaces}
               base={base}
               onNavigate={onNavigate}
             />
           ))}
           {space.lists.map((list) => (
-            <ListRow key={list.id} list={list} base={base} depth={2} onNavigate={onNavigate} />
+            <ListRow
+              key={list.id}
+              list={list}
+              base={base}
+              depth={2}
+              workspaceId={workspaceId}
+              allSpaces={allSpaces}
+              onNavigate={onNavigate}
+            />
           ))}
           {listCount === 0 && space.folders.length === 0 && (
             <p className="py-1 pl-[38px] text-xs text-muted-foreground">No lists yet</p>
@@ -206,6 +233,7 @@ export function SidebarTree({
           key={space.id}
           space={space}
           workspaceId={workspaceId}
+          allSpaces={spaces}
           base={base}
           onNavigate={onNavigate}
         />

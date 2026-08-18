@@ -8,6 +8,8 @@ interface AuthResponse {
 }
 
 export const login = (input: LoginInput) => api.post<AuthResponse>("/api/auth/login", input);
+/** Only succeeds when the server has PUBLIC_ACCESS_MODE enabled — see apps/api env.ts. */
+export const publicSession = () => api.post<AuthResponse>("/api/auth/public-session");
 export const register = (input: RegisterInput) => api.post<AuthResponse>("/api/auth/register", input);
 export const logout = () => api.post<void>("/api/auth/logout");
 export const forgotPassword = (input: ForgotPasswordInput) => api.post<{ ok: true }>("/api/auth/forgot-password", input);

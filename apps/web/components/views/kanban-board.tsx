@@ -14,12 +14,11 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { listTasks, moveTask, type TaskSummary } from "@/lib/queries/tasks";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { moveTask, type TaskSummary } from "@/lib/queries/tasks";
 import type { WorkflowState } from "@/lib/queries/projects";
 import { TaskCard } from "@/components/task/task-card";
 import { CreateTaskDialog } from "@/components/task/create-task-dialog";
-import { Skeleton } from "@/components/ui/skeleton";
 
 function Column({
   state,
@@ -61,19 +60,15 @@ export function KanbanBoard({
   projectId,
   projectKey,
   workflowStates,
+  tasks,
 }: {
   projectId: string;
   projectKey: string;
   workflowStates: WorkflowState[];
+  /** Already filtered by the page — the board only ever lays out what's passed in. */
+  tasks: TaskSummary[];
 }) {
   const queryClient = useQueryClient();
-  const { data: tasks, isLoading } = useQuery({
-    queryKey: ["tasks", projectId],
-    queryFn: () => listTasks(projectId),
-    refetchInterval: 10_000,
-    refetchOnWindowFocus: true,
-  });
-
   const [columns, setColumns] = useState<Record<string, TaskSummary[]>>({});
   const [activeTask, setActiveTask] = useState<TaskSummary | null>(null);
 
@@ -162,16 +157,6 @@ export function KanbanBoard({
     else position = (prevPos + nextPos) / 2;
 
     moveMutation.mutate({ taskId: activeId, workflowStateId: columnId, position });
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex flex-1 gap-4 overflow-x-auto p-4">
-        {workflowStates.map((s) => (
-          <Skeleton key={s.id} className="h-full w-72 shrink-0 rounded-xl" />
-        ))}
-      </div>
-    );
   }
 
   return (

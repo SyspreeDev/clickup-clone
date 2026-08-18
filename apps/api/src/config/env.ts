@@ -42,6 +42,11 @@ export const env = {
   r2Bucket: process.env.R2_BUCKET || undefined,
 
   webOrigin: process.env.CORS_ORIGIN ?? "http://localhost:3000",
+
+  // Auto-signs every visitor into a fixed account, skipping login entirely.
+  // Off by default everywhere — a deliberate opt-in per environment, not a code default.
+  publicAccessMode: process.env.PUBLIC_ACCESS_MODE === "true",
+  publicAccessEmail: process.env.PUBLIC_ACCESS_EMAIL || undefined,
 };
 
 // The callback URL is part of the requirement, not optional extra: the strategy
