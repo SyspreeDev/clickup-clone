@@ -5,10 +5,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ChevronDown, ChevronRight, Folder, FolderOpen, Hash, Lock, Layers, MoreHorizontal, Archive, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Folder, FolderOpen, Hash, Lock, Layers, MoreHorizontal, Archive, Trash2, FolderInput } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NewListButton } from "@/components/hierarchy/new-list-dialog";
-import { MoveListButton } from "@/components/hierarchy/move-list-dialog";
+import { MoveListDialog } from "@/components/hierarchy/move-list-dialog";
 import { RenameFolderDialog } from "@/components/hierarchy/rename-folder-dialog";
 import { RenameListDialog } from "@/components/hierarchy/rename-list-dialog";
 import { RenameTeamDialog } from "@/components/teams/rename-team-dialog";
@@ -38,6 +38,7 @@ function ListRow({
   const pathname = usePathname();
   const active = pathname?.startsWith(`${base}/projects/${list.id}`) ?? false;
   const queryClient = useQueryClient();
+  const [moveOpen, setMoveOpen] = useState(false);
 
   const archiveMutation = useMutation({
     mutationFn: () => archiveProject(list.id),
@@ -66,7 +67,6 @@ function ListRow({
       {list._count.tasks > 0 && (
         <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">{list._count.tasks}</span>
       )}
-      <MoveListButton workspaceId={workspaceId} list={list} spaces={allSpaces} />
       <DropdownMenu>
         <DropdownMenuTrigger
           className="shrink-0 rounded p-1 text-muted-foreground opacity-0 hover:bg-sidebar-border hover:text-sidebar-foreground group-hover/row:opacity-100"
@@ -76,6 +76,10 @@ function ListRow({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <RenameListDialog workspaceId={workspaceId} projectId={list.id} currentName={list.name} />
+          <DropdownMenuItem onSelect={(e) => e.preventDefault()} onClick={() => setMoveOpen(true)}>
+            <FolderInput className="h-4 w-4" />
+            Move list
+          </DropdownMenuItem>
           <DropdownMenuItem
             className="text-destructive focus:text-destructive"
             onClick={() => {
@@ -89,6 +93,7 @@ function ListRow({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      <MoveListDialog workspaceId={workspaceId} list={list} spaces={allSpaces} open={moveOpen} onOpenChange={setMoveOpen} />
     </div>
   );
 }

@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -107,35 +106,5 @@ export function MoveListDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-/** Small "⋯" trigger used in the sidebar list row. */
-export function MoveListButton({
-  workspaceId,
-  list,
-  spaces,
-}: {
-  workspaceId: string;
-  list: TreeList;
-  spaces: TreeSpace[];
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <button
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          setOpen(true);
-        }}
-        aria-label="Move list"
-        title="Move list"
-        className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:bg-sidebar-border hover:text-sidebar-foreground focus:opacity-100 group-hover/row:opacity-100"
-      >
-        <MoreHorizontal className="h-3.5 w-3.5" />
-      </button>
-      <MoveListDialog workspaceId={workspaceId} list={list} spaces={spaces} open={open} onOpenChange={setOpen} />
-    </>
   );
 }
