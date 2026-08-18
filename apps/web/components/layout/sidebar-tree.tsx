@@ -3,10 +3,20 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown, ChevronRight, Folder, FolderOpen, Hash, Lock, Layers } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { ChevronDown, ChevronRight, Folder, FolderOpen, Hash, Lock, Layers, MoreHorizontal, Archive, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NewListButton } from "@/components/hierarchy/new-list-dialog";
 import { MoveListButton } from "@/components/hierarchy/move-list-dialog";
+import { RenameFolderDialog } from "@/components/hierarchy/rename-folder-dialog";
+import { RenameListDialog } from "@/components/hierarchy/rename-list-dialog";
+import { RenameTeamDialog } from "@/components/teams/rename-team-dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { deleteFolder } from "@/lib/queries/hierarchy";
+import { archiveProject } from "@/lib/queries/projects";
+import { deleteTeam } from "@/lib/queries/teams";
+import { ApiError } from "@/lib/api-client";
 import type { TreeFolder, TreeList, TreeSpace } from "@/lib/queries/hierarchy";
 
 /** One list row — the leaf of Space → Folder → List. */
@@ -27,6 +37,16 @@ function ListRow({
 }) {
   const pathname = usePathname();
   const active = pathname?.startsWith(`${base}/projects/${list.id}`) ?? false;
+  const queryClient = useQueryClient();
+
+  const archiveMutation = useMutation({
+    mutationFn: () => archiveProject(list.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tree", workspaceId] });
+      toast.success(`"${list.name}" archived`);
+    },
+    onError: (err) => toast.error(err instanceof ApiError ? err.message : "Something went wrong"),
+  });
 
   return (
     <div className="group/row flex items-center gap-1 rounded-lg pr-1.5 transition-colors hover:bg-sidebar-border/60">
@@ -47,6 +67,28 @@ function ListRow({
         <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">{list._count.tasks}</span>
       )}
       <MoveListButton workspaceId={workspaceId} list={list} spaces={allSpaces} />
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          className="shrink-0 rounded p-1 text-muted-foreground opacity-0 hover:bg-sidebar-border hover:text-sidebar-foreground group-hover/row:opacity-100"
+          aria-label={`Manage ${list.name}`}
+        >
+          <MoreHorizontal className="h-3.5 w-3.5" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <RenameListDialog workspaceId={workspaceId} projectId={list.id} currentName={list.name} />
+          <DropdownMenuItem
+            className="text-destructive focus:text-destructive"
+            onClick={() => {
+              if (window.confirm(`Archive "${list.name}"? It will disappear from the sidebar but its tasks are kept — this is reversible from the workspace admin, not a permanent delete.`)) {
+                archiveMutation.mutate();
+              }
+            }}
+          >
+            <Archive className="h-4 w-4" />
+            Archive list
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }
@@ -68,6 +110,16 @@ function FolderRow({
 }) {
   // Folders start open so work is visible without hunting for it.
   const [open, setOpen] = useState(true);
+  const queryClient = useQueryClient();
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteFolder(folder.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tree", workspaceId] });
+      toast.success(`"${folder.name}" deleted`);
+    },
+    onError: (err) => toast.error(err instanceof ApiError ? err.message : "Something went wrong"),
+  });
 
   return (
     <div>
@@ -96,6 +148,32 @@ function FolderRow({
         </Link>
         <NewListButton workspaceId={workspaceId} teamId={spaceId} folderId={folder.id} label="New list in folder" />
         <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">{folder.lists.length || ""}</span>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            className="shrink-0 rounded p-1 text-muted-foreground opacity-0 hover:bg-sidebar-border hover:text-sidebar-foreground group-hover/row:opacity-100"
+            aria-label={`Manage ${folder.name}`}
+          >
+            <MoreHorizontal className="h-3.5 w-3.5" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <RenameFolderDialog workspaceId={workspaceId} folderId={folder.id} currentName={folder.name} />
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={() => {
+                if (
+                  window.confirm(
+                    `Delete folder "${folder.name}"? Its ${folder.lists.length} list(s) are NOT deleted — they move directly into the space. This cannot be undone.`,
+                  )
+                ) {
+                  deleteMutation.mutate();
+                }
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete folder
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {open &&
@@ -133,6 +211,17 @@ function SpaceRow({
 }) {
   const [open, setOpen] = useState(true);
   const listCount = space.lists.length + space.folders.reduce((n, f) => n + f.lists.length, 0);
+  const queryClient = useQueryClient();
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteTeam(space.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tree", workspaceId] });
+      queryClient.invalidateQueries({ queryKey: ["teams", workspaceId] });
+      toast.success(`"${space.name}" deleted`);
+    },
+    onError: (err) => toast.error(err instanceof ApiError ? err.message : "Something went wrong"),
+  });
 
   return (
     <div>
@@ -161,6 +250,37 @@ function SpaceRow({
         </Link>
         <NewListButton workspaceId={workspaceId} teamId={space.id} label="New list in space" />
         <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">{listCount || ""}</span>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            className="shrink-0 rounded p-1 text-muted-foreground opacity-0 hover:bg-sidebar-border hover:text-sidebar-foreground group-hover/row:opacity-100"
+            aria-label={`Manage ${space.name}`}
+          >
+            <MoreHorizontal className="h-3.5 w-3.5" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <RenameTeamDialog
+              workspaceId={workspaceId}
+              teamId={space.id}
+              currentName={space.name}
+              currentDescription={undefined}
+            />
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={() => {
+                if (
+                  window.confirm(
+                    `Delete space "${space.name}"? Its ${listCount} list(s) are NOT deleted — they become unassigned rather than destroyed. This cannot be undone.`,
+                  )
+                ) {
+                  deleteMutation.mutate();
+                }
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete space
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {open && (

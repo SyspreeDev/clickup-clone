@@ -36,9 +36,17 @@ export function RenameTeamDialog({
   workspaceId: string;
   teamId: string;
   currentName: string;
-  currentDescription: string | null;
+  /**
+   * `null` = known to have no description (full team data available, e.g.
+   * the admin dashboard). `undefined` = caller doesn't have the current
+   * description at all (e.g. the sidebar tree, which only loads names) — in
+   * that case the field is hidden and omitted from the submit payload
+   * entirely, rather than risking silently overwriting it with "".
+   */
+  currentDescription: string | null | undefined;
 }) {
   const [open, setOpen] = useState(false);
+  const knowsDescription = currentDescription !== undefined;
   const queryClient = useQueryClient();
   const {
     register,
@@ -47,11 +55,12 @@ export function RenameTeamDialog({
     formState: { errors },
   } = useForm<UpdateTeamInput>({
     resolver: zodResolver(updateTeamSchema),
-    defaultValues: { name: currentName, description: currentDescription ?? "" },
+    defaultValues: { name: currentName, ...(knowsDescription && { description: currentDescription ?? "" }) },
   });
 
   const mutation = useMutation({
-    mutationFn: (input: UpdateTeamInput) => updateTeam(teamId, input),
+    mutationFn: (input: UpdateTeamInput) =>
+      updateTeam(teamId, knowsDescription ? input : { name: input.name }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["teams", workspaceId] });
       queryClient.invalidateQueries({ queryKey: ["team", teamId] });
@@ -69,7 +78,7 @@ export function RenameTeamDialog({
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        if (next) reset({ name: currentName, description: currentDescription ?? "" });
+        if (next) reset({ name: currentName, ...(knowsDescription && { description: currentDescription ?? "" }) });
       }}
     >
       <DropdownMenuItem onSelect={(e) => e.preventDefault()} onClick={() => setOpen(true)}>
@@ -86,10 +95,12 @@ export function RenameTeamDialog({
             <Input id="rename-name" {...register("name")} />
             {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="rename-description">Description (optional)</Label>
-            <Input id="rename-description" {...register("description")} />
-          </div>
+          {knowsDescription && (
+            <div className="space-y-2">
+              <Label htmlFor="rename-description">Description (optional)</Label>
+              <Input id="rename-description" {...register("description")} />
+            </div>
+          )}
           <DialogFooter>
             <Button type="submit" disabled={mutation.isPending}>
               {mutation.isPending ? "Saving…" : "Save changes"}
