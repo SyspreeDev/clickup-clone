@@ -48,7 +48,7 @@ export const getDashboard = (workspaceId: string) => api.get<DashboardData>(`/ap
 
 export const listMembers = (workspaceId: string) => api.get<WorkspaceMember[]>(`/api/workspaces/${workspaceId}/members`);
 export const inviteMember = (workspaceId: string, input: InviteMemberInput) =>
-  api.post<WorkspaceMember & { inviteLink: string; alreadyHasAccount: boolean }>(
+  api.post<WorkspaceMember & { inviteLink: string; alreadyHasAccount: boolean; emailSent: boolean }>(
     `/api/workspaces/${workspaceId}/members/invite`,
     input,
   );

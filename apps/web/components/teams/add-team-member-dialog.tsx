@@ -31,7 +31,7 @@ export function AddTeamMemberDialog({
   const [role, setRole] = useState<string>("MEMBER");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<string>("MEMBER");
-  const [inviteResult, setInviteResult] = useState<{ email: string; link: string; alreadyHasAccount: boolean } | null>(null);
+  const [inviteResult, setInviteResult] = useState<{ email: string; link: string; alreadyHasAccount: boolean; emailSent?: boolean } | null>(null);
   const queryClient = useQueryClient();
 
   const { data: members } = useQuery({
@@ -66,7 +66,7 @@ export function AddTeamMemberDialog({
     },
     onSuccess: (member) => {
       invalidateAll();
-      setInviteResult({ email: inviteEmail, link: member.inviteLink, alreadyHasAccount: member.alreadyHasAccount });
+      setInviteResult({ email: inviteEmail, link: member.inviteLink, alreadyHasAccount: member.alreadyHasAccount, emailSent: member.emailSent });
       setInviteEmail("");
     },
     onError: (err) => toast.error(err instanceof ApiError ? err.message : "Something went wrong"),

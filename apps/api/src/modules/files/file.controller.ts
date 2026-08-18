@@ -25,6 +25,32 @@ export async function uploadFile(req: Request, res: Response) {
   );
   res.status(201).json(file);
 }
+export async function presignUpload(req: Request, res: Response) {
+  const { filename, contentType } = req.body as { filename?: string; contentType?: string };
+  if (!filename || !contentType) throw new BadRequestError("filename and contentType are required");
+  const presigned = await fileService.presignUpload(filename, contentType);
+  if (!presigned) {
+    res.status(501).json({
+      error: { code: "STORAGE_PRESIGN_UNSUPPORTED", message: "Direct upload is not supported by the current storage provider" },
+    });
+    return;
+  }
+  res.json(presigned);
+}
+
+export async function completeUpload(req: Request, res: Response) {
+  const { key, name, size, mimeType } = req.body as { key?: string; name?: string; size?: number; mimeType?: string };
+  if (!key || !name || !size || !mimeType) throw new BadRequestError("key, name, size, and mimeType are required");
+  const file = await fileService.completeUpload(
+    req.params.workspaceId,
+    req.user!.id,
+    { key, name, size, mimeType },
+    (req.body.folderId as string) || null,
+    (req.body.projectId as string) || null,
+  );
+  res.status(201).json(file);
+}
+
 export async function downloadFile(req: Request, res: Response) {
   const file = await fileService.readFileForUser(req.params.id, req.user!.id);
   res.setHeader("Content-Type", file.mimeType || "application/octet-stream");

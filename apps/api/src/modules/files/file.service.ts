@@ -45,6 +45,44 @@ export async function uploadFile(
   });
 }
 
+/**
+ * Direct-to-storage upload, step 1: hand the browser a short-lived URL it can
+ * PUT the file bytes to itself. Only meaningful when the active storage
+ * provider supports it (R2) — callers must fall back to the buffered
+ * multipart route otherwise.
+ */
+export async function presignUpload(originalName: string, contentType: string) {
+  if (!storageProvider.presignUpload) return null;
+  return storageProvider.presignUpload(originalName, contentType);
+}
+
+/**
+ * Direct-to-storage upload, step 2: the browser already PUT the bytes to the
+ * key from presignUpload, so this just records the File row — no buffer
+ * passes through our server at all.
+ */
+export async function completeUpload(
+  workspaceId: string,
+  uploaderId: string,
+  input: { key: string; name: string; size: number; mimeType: string },
+  folderId: string | null,
+  projectId: string | null,
+) {
+  return prisma.file.create({
+    data: {
+      workspaceId,
+      folderId,
+      projectId,
+      name: input.name,
+      url: storageProvider.resolveUrl(input.key),
+      size: input.size,
+      mimeType: input.mimeType,
+      uploadedById: uploaderId,
+    },
+    include: { uploadedBy: { select: { id: true, name: true, avatarUrl: true } } },
+  });
+}
+
 export async function deleteFile(id: string) {
   const file = await prisma.file.findUnique({ where: { id } });
   if (!file) throw new NotFoundError("File not found");

@@ -10,6 +10,7 @@ import {
   MessagesSquare,
   CalendarClock,
   Settings,
+  ShieldCheck,
   Plus,
   ChevronRight,
   LogOut,
@@ -71,6 +72,8 @@ export function Sidebar({ workspaceId }: { workspaceId: string }) {
   });
 
   const base = `/workspace/${workspaceId}`;
+  const role = user?.workspaces.find((w) => w.id === workspaceId)?.role;
+  const isAdmin = role === "OWNER" || role === "ADMIN";
   // Files and Reports are deliberately absent: a client's documents belong on
   // that client's task, and the reports screen wasn't earning its place. Both
   // pages still exist at their URLs.
@@ -80,6 +83,7 @@ export function Sidebar({ workspaceId }: { workspaceId: string }) {
     { href: `${base}/teams`, icon: Users2, label: "Spaces" },
     { href: `${base}/chat`, icon: MessagesSquare, label: "Chat" },
     { href: `${base}/meetings`, icon: CalendarClock, label: "Meetings" },
+    ...(isAdmin ? [{ href: `${base}/admin`, icon: ShieldCheck, label: "Admin" }] : []),
   ];
 
   async function handleLogout() {

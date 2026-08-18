@@ -115,3 +115,6 @@ function createEmailProvider(): EmailProvider {
 }
 
 export const emailProvider: EmailProvider = createEmailProvider();
+
+/** Whether outbound mail is actually being sent, not just logged to the console. */
+export const emailIsLive = Boolean(env.emailProvider === "resend" && env.resendApiKey && env.emailFrom);

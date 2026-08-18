@@ -1,7 +1,7 @@
 import { prisma } from "../../lib/prisma";
 import { accessibleProjectWhere } from "../../lib/access";
 import { NotFoundError } from "../../lib/errors";
-import { emailProvider } from "../../lib/email";
+import { emailProvider, emailIsLive } from "../../lib/email";
 import { env } from "../../config/env";
 import type { CreateWorkspaceInput, UpdateWorkspaceInput, InviteMemberInput } from "@repo/shared-types";
 
@@ -107,7 +107,7 @@ export async function inviteMember(workspaceId: string, input: InviteMemberInput
       : `<p>${inviterName} invited you to join <strong>${workspace.name}</strong> on Flowspace.</p><p><a href="${inviteLink}">Create your account to accept</a></p>`,
   });
 
-  return { ...member, inviteLink, alreadyHasAccount };
+  return { ...member, inviteLink, alreadyHasAccount, emailSent: emailIsLive };
 }
 
 export async function updateMemberRole(workspaceId: string, memberId: string, role: string) {

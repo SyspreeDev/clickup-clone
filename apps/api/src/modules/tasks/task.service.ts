@@ -144,6 +144,69 @@ export async function addAttachment(
   return attachment;
 }
 
+/** Direct-to-storage upload, step 1 — see file.service.ts presignUpload for the full explanation. */
+export async function presignAttachmentUpload(originalName: string, contentType: string) {
+  if (!storageProvider.presignUpload) return null;
+  return storageProvider.presignUpload(originalName, contentType);
+}
+
+/**
+ * Direct-to-storage upload, step 2: the browser already PUT the bytes, so
+ * this just records the Attachment (and its mirrored File row) — mirrors
+ * addAttachment above minus the storageProvider.save call.
+ */
+export async function completeAttachmentUpload(
+  taskId: string,
+  uploaderId: string,
+  input: { key: string; name: string; size: number; mimeType: string },
+) {
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    select: { projectId: true, title: true, project: { select: { workspaceId: true } } },
+  });
+  if (!task) throw new NotFoundError("Task not found");
+
+  const url = storageProvider.resolveUrl(input.key);
+
+  const record = await prisma.file.create({
+    data: {
+      workspaceId: task.project.workspaceId,
+      projectId: task.projectId,
+      name: input.name,
+      url,
+      size: input.size,
+      mimeType: input.mimeType,
+      uploadedById: uploaderId,
+    },
+  });
+
+  const attachment = await prisma.attachment.create({
+    data: {
+      taskId,
+      fileId: record.id,
+      fileName: input.name,
+      fileUrl: url,
+      fileSize: input.size,
+      mimeType: input.mimeType,
+      uploadedById: uploaderId,
+    },
+    include: { uploadedBy: { select: { id: true, name: true, avatarUrl: true } } },
+  });
+
+  await logActivity({
+    workspaceId: task.project.workspaceId,
+    projectId: task.projectId,
+    taskId,
+    actorId: uploaderId,
+    action: "ATTACHMENT_ADDED",
+    entityType: "Attachment",
+    entityId: attachment.id,
+    metadata: { fileName: input.name },
+  });
+
+  return attachment;
+}
+
 export async function deleteAttachment(id: string) {
   const attachment = await prisma.attachment.findUnique({ where: { id }, select: { fileId: true } });
   if (!attachment) throw new NotFoundError("Attachment not found");

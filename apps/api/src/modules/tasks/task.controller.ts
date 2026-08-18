@@ -41,6 +41,24 @@ export async function addAttachment(req: Request, res: Response) {
   if (!req.file) throw new BadRequestError("No file uploaded");
   res.status(201).json(await taskService.addAttachment(req.params.taskId, req.user!.id, req.file));
 }
+export async function presignAttachmentUpload(req: Request, res: Response) {
+  const { filename, contentType } = req.body as { filename?: string; contentType?: string };
+  if (!filename || !contentType) throw new BadRequestError("filename and contentType are required");
+  const presigned = await taskService.presignAttachmentUpload(filename, contentType);
+  if (!presigned) {
+    res.status(501).json({
+      error: { code: "STORAGE_PRESIGN_UNSUPPORTED", message: "Direct upload is not supported by the current storage provider" },
+    });
+    return;
+  }
+  res.json(presigned);
+}
+export async function completeAttachmentUpload(req: Request, res: Response) {
+  const { key, name, size, mimeType } = req.body as { key?: string; name?: string; size?: number; mimeType?: string };
+  if (!key || !name || !size || !mimeType) throw new BadRequestError("key, name, size, and mimeType are required");
+  const attachment = await taskService.completeAttachmentUpload(req.params.taskId, req.user!.id, { key, name, size, mimeType });
+  res.status(201).json(attachment);
+}
 export async function deleteAttachment(req: Request, res: Response) {
   await taskService.deleteAttachment(req.params.id);
   res.status(204).send();

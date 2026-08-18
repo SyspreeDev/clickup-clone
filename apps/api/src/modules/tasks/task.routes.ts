@@ -70,6 +70,16 @@ taskRouter.post(
   upload.single("file"),
   asyncHandler(controller.addAttachment),
 );
+taskRouter.post(
+  "/tasks/:taskId/attachments/presign",
+  requireTaskProjectAccess("MEMBER"),
+  asyncHandler(controller.presignAttachmentUpload),
+);
+taskRouter.post(
+  "/tasks/:taskId/attachments/complete",
+  requireTaskProjectAccess("MEMBER"),
+  asyncHandler(controller.completeAttachmentUpload),
+);
 taskRouter.delete(
   "/attachments/:id",
   requireTaskAccessVia(viaAttachment, "MEMBER"),

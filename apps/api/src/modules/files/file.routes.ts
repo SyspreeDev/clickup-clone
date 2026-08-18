@@ -20,6 +20,11 @@ fileRouter.post(
   upload.single("file"),
   asyncHandler(controller.uploadFile),
 );
+// Direct-to-storage upload: presign issues a short-lived PUT URL, the browser
+// uploads straight to it, then complete records the File row. Same MEMBER
+// guard as the buffered route above — these two calls replace it, not extend it.
+fileRouter.post("/workspaces/:workspaceId/files/presign", requireWorkspaceRole("MEMBER"), asyncHandler(controller.presignUpload));
+fileRouter.post("/workspaces/:workspaceId/files/complete", requireWorkspaceRole("MEMBER"), asyncHandler(controller.completeUpload));
 // Access is decided per file — by its list if it has one, otherwise by
 // workspace membership — so there is no route-level role guard here.
 fileRouter.get("/files/:id/download", asyncHandler(controller.downloadFile));

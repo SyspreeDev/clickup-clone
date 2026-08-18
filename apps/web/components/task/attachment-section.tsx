@@ -161,7 +161,7 @@ export function AttachmentSection({ task, onChange }: { task: TaskDetail; onChan
           <Upload className="h-3.5 w-3.5" />
           {upload.isPending ? "Uploading…" : "Upload files"}
         </Button>
-        <p className="mt-1.5 text-xs text-muted-foreground">or drag them here — up to 25MB each</p>
+        <p className="mt-1.5 text-xs text-muted-foreground">or drag them here</p>
       </div>
     </section>
   );

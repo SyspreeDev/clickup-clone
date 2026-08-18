@@ -18,7 +18,7 @@ import { ApiError } from "@/lib/api-client";
 
 export function InviteMemberDialog({ workspaceId }: { workspaceId: string }) {
   const [open, setOpen] = useState(false);
-  const [result, setResult] = useState<{ email: string; link: string; alreadyHasAccount: boolean } | null>(null);
+  const [result, setResult] = useState<{ email: string; link: string; alreadyHasAccount: boolean; emailSent?: boolean } | null>(null);
   const queryClient = useQueryClient();
   const {
     register,
@@ -33,7 +33,7 @@ export function InviteMemberDialog({ workspaceId }: { workspaceId: string }) {
     mutationFn: (input: InviteMemberInput) => inviteMember(workspaceId, input),
     onSuccess: (member, variables) => {
       queryClient.invalidateQueries({ queryKey: ["workspace-members", workspaceId] });
-      setResult({ email: variables.email, link: member.inviteLink, alreadyHasAccount: member.alreadyHasAccount });
+      setResult({ email: variables.email, link: member.inviteLink, alreadyHasAccount: member.alreadyHasAccount, emailSent: member.emailSent });
       reset();
     },
     onError: (err) => toast.error(err instanceof ApiError ? err.message : "Something went wrong"),

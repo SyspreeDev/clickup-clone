@@ -36,6 +36,11 @@ export const env = {
   storageProvider: process.env.STORAGE_PROVIDER ?? "local",
   uploadDir: process.env.UPLOAD_DIR ?? "./uploads",
 
+  r2AccountId: process.env.R2_ACCOUNT_ID || undefined,
+  r2AccessKeyId: process.env.R2_ACCESS_KEY_ID || undefined,
+  r2SecretAccessKey: process.env.R2_SECRET_ACCESS_KEY || undefined,
+  r2Bucket: process.env.R2_BUCKET || undefined,
+
   webOrigin: process.env.CORS_ORIGIN ?? "http://localhost:3000",
 };
 
@@ -48,4 +53,8 @@ export const isGoogleOAuthConfigured = Boolean(
 
 export const isZoomConfigured = Boolean(
   env.zoomAccountId && env.zoomClientId && env.zoomClientSecret,
+);
+
+export const isR2Configured = Boolean(
+  env.r2AccountId && env.r2AccessKeyId && env.r2SecretAccessKey && env.r2Bucket,
 );

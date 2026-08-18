@@ -1,4 +1,4 @@
-import { api, apiUpload } from "@/lib/api-client";
+import { api, apiUpload, ApiError } from "@/lib/api-client";
 import type {
   CreateTaskInput,
   UpdateTaskInput,
@@ -115,10 +115,39 @@ export const updateChecklistItem = (id: string, input: { isCompleted?: boolean; 
   api.patch(`/api/checklist-items/${id}`, input);
 export const deleteChecklistItem = (id: string) => api.delete(`/api/checklist-items/${id}`);
 
-export function uploadAttachment(taskId: string, file: File) {
-  const formData = new FormData();
-  formData.append("file", file);
-  return apiUpload<Attachment>(`/api/tasks/${taskId}/attachments`, formData);
+interface PresignedUpload {
+  key: string;
+  uploadUrl: string;
+}
+
+/**
+ * Same direct-to-storage pattern as queries/files.ts uploadFile — see that
+ * comment for the full explanation. This is the path that matters most for
+ * client videos, since attachments are where those actually get dropped.
+ */
+export async function uploadAttachment(taskId: string, file: File) {
+  const contentType = file.type || "application/octet-stream";
+  try {
+    const presigned = await api.post<PresignedUpload>(`/api/tasks/${taskId}/attachments/presign`, {
+      filename: file.name,
+      contentType,
+    });
+    const putRes = await fetch(presigned.uploadUrl, { method: "PUT", body: file, headers: { "Content-Type": contentType } });
+    if (!putRes.ok) throw new Error(`Direct upload failed (${putRes.status})`);
+    return api.post<Attachment>(`/api/tasks/${taskId}/attachments/complete`, {
+      key: presigned.key,
+      name: file.name,
+      size: file.size,
+      mimeType: contentType,
+    });
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 501) {
+      const formData = new FormData();
+      formData.append("file", file);
+      return apiUpload<Attachment>(`/api/tasks/${taskId}/attachments`, formData);
+    }
+    throw err;
+  }
 }
 export const deleteAttachment = (id: string) => api.delete<void>(`/api/attachments/${id}`);
 // To fetch the bytes, use downloadFile(attachment.fileId, …) from queries/files —
