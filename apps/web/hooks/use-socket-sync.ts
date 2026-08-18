@@ -48,6 +48,9 @@ export function useSocketSync(workspaceId: string) {
     const onPresence = () => {
       queryClient.invalidateQueries({ queryKey: ["presence"] });
     };
+    const onFileChange = () => {
+      queryClient.invalidateQueries({ queryKey: ["files", workspaceId] });
+    };
 
     socket.on("task:created", onTaskChange);
     socket.on("task:updated", onTaskChange);
@@ -60,6 +63,8 @@ export function useSocketSync(workspaceId: string) {
     socket.on("message:new", onMessage);
     socket.on("presence:online", onPresence);
     socket.on("presence:offline", onPresence);
+    socket.on("file:created", onFileChange);
+    socket.on("file:deleted", onFileChange);
 
     return () => {
       socket.emit("leave:workspace", workspaceId);
@@ -75,6 +80,8 @@ export function useSocketSync(workspaceId: string) {
       socket.off("message:new", onMessage);
       socket.off("presence:online", onPresence);
       socket.off("presence:offline", onPresence);
+      socket.off("file:created", onFileChange);
+      socket.off("file:deleted", onFileChange);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken, workspaceId]);

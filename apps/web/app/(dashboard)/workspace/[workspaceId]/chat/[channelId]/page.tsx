@@ -7,12 +7,15 @@ import { Button } from "@/components/ui/button";
 import { MessageItem } from "@/components/chat/message-item";
 import { Skeleton } from "@/components/ui/skeleton";
 import { listMessages, sendMessage } from "@/lib/queries/chat";
+import { getSocket } from "@/lib/socket";
+import { useAuthStore } from "@/stores/auth-store";
 
 export default function ChannelPage({ params }: { params: Promise<{ workspaceId: string; channelId: string }> }) {
   const { channelId } = use(params);
   const [content, setContent] = useState("");
   const queryClient = useQueryClient();
   const bottomRef = useRef<HTMLDivElement>(null);
+  const accessToken = useAuthStore((s) => s.accessToken);
 
   const { data: messages, isLoading } = useQuery({
     queryKey: ["messages", channelId],
@@ -22,6 +25,21 @@ export default function ChannelPage({ params }: { params: Promise<{ workspaceId:
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages?.length]);
+
+  // The API broadcasts new messages to this channel's own socket room (rather than
+  // the whole workspace, unlike tasks/activity) — so whoever has it open needs to
+  // actually be in that room, or the live update never arrives.
+  useEffect(() => {
+    if (!accessToken) return;
+    const socket = getSocket(accessToken);
+    const join = () => socket.emit("join:channel", channelId);
+    if (socket.connected) join();
+    socket.on("connect", join);
+    return () => {
+      socket.emit("leave:channel", channelId);
+      socket.off("connect", join);
+    };
+  }, [accessToken, channelId]);
 
   const mutation = useMutation({
     mutationFn: () => sendMessage(channelId, { content }),

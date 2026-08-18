@@ -4,7 +4,7 @@ import { NotFoundError, BadRequestError, ForbiddenError, ConflictError } from ".
 import { resolveProjectRole } from "../../lib/access";
 import { logActivity } from "../../lib/activity";
 import { createNotification } from "../notifications/notification.service";
-import { emitToProject } from "../../sockets";
+import { emitToWorkspace } from "../../sockets";
 import type {
   CreateTaskInput,
   UpdateTaskInput,
@@ -141,6 +141,7 @@ export async function addAttachment(
     metadata: { fileName: file.originalname },
   });
 
+  emitToWorkspace(task.project.workspaceId, "task:updated", await getTask(taskId));
   return attachment;
 }
 
@@ -204,16 +205,24 @@ export async function completeAttachmentUpload(
     metadata: { fileName: input.name },
   });
 
+  emitToWorkspace(task.project.workspaceId, "task:updated", await getTask(taskId));
   return attachment;
 }
 
 export async function deleteAttachment(id: string) {
-  const attachment = await prisma.attachment.findUnique({ where: { id }, select: { fileId: true } });
+  const attachment = await prisma.attachment.findUnique({
+    where: { id },
+    select: { fileId: true, taskId: true, task: { select: { project: { select: { workspaceId: true } } } } },
+  });
   if (!attachment) throw new NotFoundError("Attachment not found");
 
   await prisma.attachment.delete({ where: { id } });
   // The File row exists only to surface this upload under the client, so it goes too.
   if (attachment.fileId) await prisma.file.delete({ where: { id: attachment.fileId } }).catch(() => {});
+
+  if (attachment.taskId && attachment.task) {
+    emitToWorkspace(attachment.task.project.workspaceId, "task:updated", await getTask(attachment.taskId));
+  }
 }
 
 export async function createTask(projectId: string, creatorId: string, input: CreateTaskInput) {
@@ -270,7 +279,7 @@ export async function createTask(projectId: string, creatorId: string, input: Cr
     });
   }
 
-  emitToProject(projectId, "task:created", task);
+  emitToWorkspace(project.workspaceId, "task:created", task);
   return task;
 }
 
@@ -307,7 +316,7 @@ export async function updateTask(taskId: string, input: UpdateTaskInput, actorId
     // handled in moveTask; left here for direct-update edge cases
   }
 
-  emitToProject(existing.projectId, "task:updated", task);
+  emitToWorkspace(existing.project.workspaceId, "task:updated", task);
   return task;
 }
 
@@ -355,15 +364,15 @@ export async function moveTask(taskId: string, input: MoveTaskInput, actorId: st
     }
   }
 
-  emitToProject(existing.projectId, "task:moved", task);
+  emitToWorkspace(existing.project.workspaceId, "task:moved", task);
   return task;
 }
 
 export async function deleteTask(taskId: string) {
-  const existing = await prisma.task.findUnique({ where: { id: taskId } });
+  const existing = await prisma.task.findUnique({ where: { id: taskId }, include: { project: true } });
   if (!existing) throw new NotFoundError("Task not found");
   await prisma.task.delete({ where: { id: taskId } });
-  emitToProject(existing.projectId, "task:deleted", { id: taskId });
+  emitToWorkspace(existing.project.workspaceId, "task:deleted", { id: taskId });
 }
 
 export async function addAssignee(taskId: string, userId: string, actorId: string) {
@@ -398,7 +407,7 @@ export async function addAssignee(taskId: string, userId: string, actorId: strin
   });
 
   const updated = await getTask(taskId);
-  emitToProject(task.projectId, "task:updated", updated);
+  emitToWorkspace(task.project.workspaceId, "task:updated", updated);
   return updated;
 }
 
@@ -420,7 +429,7 @@ export async function removeAssignee(taskId: string, userId: string, actorId: st
   });
 
   const updated = await getTask(taskId);
-  emitToProject(task.projectId, "task:updated", updated);
+  emitToWorkspace(task.project.workspaceId, "task:updated", updated);
   return updated;
 }
 

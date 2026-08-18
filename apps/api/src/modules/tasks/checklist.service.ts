@@ -1,21 +1,21 @@
 import { prisma } from "../../lib/prisma";
 import { NotFoundError } from "../../lib/errors";
-import { emitToProject } from "../../sockets";
+import { emitToWorkspace } from "../../sockets";
 import type { CreateChecklistInput, CreateChecklistItemInput, UpdateChecklistItemInput } from "@repo/shared-types";
 
-async function taskProjectId(taskId: string): Promise<string> {
-  const task = await prisma.task.findUnique({ where: { id: taskId }, select: { projectId: true } });
+async function taskWorkspaceId(taskId: string): Promise<string> {
+  const task = await prisma.task.findUnique({ where: { id: taskId }, select: { project: { select: { workspaceId: true } } } });
   if (!task) throw new NotFoundError("Task not found");
-  return task.projectId;
+  return task.project.workspaceId;
 }
 
 async function emitTaskUpdated(taskId: string) {
-  const projectId = await taskProjectId(taskId);
+  const workspaceId = await taskWorkspaceId(taskId);
   const task = await prisma.task.findUnique({
     where: { id: taskId },
     include: { checklists: { include: { items: { orderBy: { position: "asc" } } }, orderBy: { position: "asc" } } },
   });
-  emitToProject(projectId, "task:updated", task);
+  emitToWorkspace(workspaceId, "task:updated", task);
 }
 
 export async function createChecklist(taskId: string, input: CreateChecklistInput) {

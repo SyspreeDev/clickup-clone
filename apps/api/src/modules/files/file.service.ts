@@ -2,6 +2,7 @@ import { prisma } from "../../lib/prisma";
 import { storageProvider } from "../../lib/storage";
 import { resolveProjectRole } from "../../lib/access";
 import { ForbiddenError, NotFoundError } from "../../lib/errors";
+import { emitToWorkspace } from "../../sockets";
 
 export async function listFolders(workspaceId: string, parentId: string | null) {
   return prisma.folder.findMany({
@@ -30,7 +31,7 @@ export async function uploadFile(
   projectId: string | null,
 ) {
   const stored = await storageProvider.save(file.originalname, file.buffer);
-  return prisma.file.create({
+  const record = await prisma.file.create({
     data: {
       workspaceId,
       folderId,
@@ -43,6 +44,8 @@ export async function uploadFile(
     },
     include: { uploadedBy: { select: { id: true, name: true, avatarUrl: true } } },
   });
+  emitToWorkspace(workspaceId, "file:created", record);
+  return record;
 }
 
 /**
@@ -68,7 +71,7 @@ export async function completeUpload(
   folderId: string | null,
   projectId: string | null,
 ) {
-  return prisma.file.create({
+  const record = await prisma.file.create({
     data: {
       workspaceId,
       folderId,
@@ -81,12 +84,15 @@ export async function completeUpload(
     },
     include: { uploadedBy: { select: { id: true, name: true, avatarUrl: true } } },
   });
+  emitToWorkspace(workspaceId, "file:created", record);
+  return record;
 }
 
 export async function deleteFile(id: string) {
   const file = await prisma.file.findUnique({ where: { id } });
   if (!file) throw new NotFoundError("File not found");
   await prisma.file.delete({ where: { id } });
+  emitToWorkspace(file.workspaceId, "file:deleted", { id });
 }
 
 /**

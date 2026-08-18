@@ -2,7 +2,7 @@ import { prisma } from "../../lib/prisma";
 import { NotFoundError, ForbiddenError } from "../../lib/errors";
 import { logActivity } from "../../lib/activity";
 import { createNotification } from "../notifications/notification.service";
-import { emitToProject } from "../../sockets";
+import { emitToWorkspace } from "../../sockets";
 import type { CreateCommentInput } from "@repo/shared-types";
 
 const COMMENT_INCLUDE = {
@@ -61,12 +61,12 @@ export async function createComment(taskId: string, authorId: string, input: Cre
     });
   }
 
-  emitToProject(task.projectId, "comment:created", comment);
+  emitToWorkspace(task.project.workspaceId, "comment:created", comment);
   return comment;
 }
 
 export async function updateComment(id: string, authorId: string, content: unknown) {
-  const comment = await prisma.comment.findUnique({ where: { id }, include: { task: true } });
+  const comment = await prisma.comment.findUnique({ where: { id }, include: { task: { include: { project: true } } } });
   if (!comment) throw new NotFoundError("Comment not found");
   if (comment.authorId !== authorId) throw new ForbiddenError("Cannot edit another user's comment");
 
@@ -75,15 +75,15 @@ export async function updateComment(id: string, authorId: string, content: unkno
     data: { content: content as never, editedAt: new Date() },
     include: COMMENT_INCLUDE,
   });
-  emitToProject(comment.task.projectId, "comment:updated", updated);
+  emitToWorkspace(comment.task.project.workspaceId, "comment:updated", updated);
   return updated;
 }
 
 export async function deleteComment(id: string, authorId: string) {
-  const comment = await prisma.comment.findUnique({ where: { id }, include: { task: true } });
+  const comment = await prisma.comment.findUnique({ where: { id }, include: { task: { include: { project: true } } } });
   if (!comment) throw new NotFoundError("Comment not found");
   if (comment.authorId !== authorId) throw new ForbiddenError("Cannot delete another user's comment");
 
   await prisma.comment.update({ where: { id }, data: { isDeleted: true, content: {} } });
-  emitToProject(comment.task.projectId, "comment:updated", { id, isDeleted: true });
+  emitToWorkspace(comment.task.project.workspaceId, "comment:updated", { id, isDeleted: true });
 }

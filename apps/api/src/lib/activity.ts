@@ -1,5 +1,5 @@
 import { prisma } from "./prisma";
-import { emitToProject } from "../sockets";
+import { emitToWorkspace } from "../sockets";
 import type { ActivityAction } from "@prisma/client";
 
 interface LogActivityInput {
@@ -28,8 +28,9 @@ export async function logActivity(input: LogActivityInput) {
     include: { actor: { select: { id: true, name: true, avatarUrl: true } } },
   });
 
-  if (input.projectId) {
-    emitToProject(input.projectId, "activity:new", entry);
-  }
+  // Broadcast to the whole workspace, not just the list's own room — the dashboard,
+  // "My Tasks", and "Clients" views all show activity across lists nobody joins a
+  // room for individually, and every client already joins its workspace room.
+  emitToWorkspace(input.workspaceId, "activity:new", entry);
   return entry;
 }
