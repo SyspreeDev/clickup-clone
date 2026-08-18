@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, ChevronRight, SearchX } from "lucide-react";
 import { TopNav } from "@/components/layout/top-nav";
 import { TaskRow } from "@/components/task/task-row";
-import { TaskDetailDialog } from "@/components/task/task-detail-dialog";
 import { CreateTaskDialog } from "@/components/task/create-task-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useProjectTasks } from "@/hooks/use-project-tasks";
@@ -97,7 +96,6 @@ export default function ListViewPage({ params }: { params: Promise<{ workspaceId
           );
         })}
       </div>
-      <TaskDetailDialog />
     </>
   );
 }

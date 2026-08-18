@@ -91,6 +91,16 @@ export async function getProject(projectId: string) {
       labels: true,
       milestones: true,
       members: { include: { user: { select: { id: true, name: true, avatarUrl: true, email: true } } } },
+      // Whoever is assignable on a list is normally decided by team membership,
+      // not by being added to the list one-by-one — `members` above only ever
+      // holds the rare explicit/guest case (see resolveProjectRole).
+      team: {
+        select: {
+          id: true,
+          name: true,
+          members: { include: { user: { select: { id: true, name: true, avatarUrl: true, email: true } } } },
+        },
+      },
       _count: { select: { tasks: true } },
     },
   });

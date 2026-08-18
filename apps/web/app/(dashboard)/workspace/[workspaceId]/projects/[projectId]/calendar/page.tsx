@@ -6,7 +6,6 @@ import { format, parse, startOfWeek, getDay } from "date-fns";
 import { enUS } from "date-fns/locale";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import { TopNav } from "@/components/layout/top-nav";
-import { TaskDetailDialog } from "@/components/task/task-detail-dialog";
 import { useTaskDetailStore } from "@/stores/task-detail-store";
 import { useProjectTasks } from "@/hooks/use-project-tasks";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -72,7 +71,6 @@ export default function CalendarViewPage({ params }: { params: Promise<{ workspa
           }}
         />
       </div>
-      <TaskDetailDialog />
     </>
   );
 }

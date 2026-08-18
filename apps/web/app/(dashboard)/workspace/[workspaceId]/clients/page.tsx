@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 import { format, isPast } from "date-fns";
 import { Building2, Search, User, X, Inbox } from "lucide-react";
 import { TopNav } from "@/components/layout/top-nav";
-import { TaskDetailDialog } from "@/components/task/task-detail-dialog";
 import { PriorityIcon, PRIORITY_CONFIG } from "@/components/task/priority-icon";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -253,7 +252,6 @@ export default function ClientsPage({ params }: { params: Promise<{ workspaceId:
           )}
         </div>
       </div>
-      <TaskDetailDialog />
     </>
   );
 }

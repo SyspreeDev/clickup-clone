@@ -34,7 +34,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TaskDetailDialog } from "@/components/task/task-detail-dialog";
 import { getDashboard } from "@/lib/queries/workspaces";
 import { listMyTasks } from "@/lib/queries/tasks";
 import { useCommandPaletteStore } from "@/stores/command-palette-store";
@@ -354,7 +353,6 @@ export default function WorkspaceDashboardPage({ params }: { params: Promise<{ w
           </div>
         </div>
       </div>
-      <TaskDetailDialog />
     </>
   );
 }

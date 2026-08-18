@@ -13,7 +13,6 @@ import { useState } from "react";
 import { format } from "date-fns";
 import { ArrowUpDown } from "lucide-react";
 import { TopNav } from "@/components/layout/top-nav";
-import { TaskDetailDialog } from "@/components/task/task-detail-dialog";
 import { PriorityIcon, priorityLabel } from "@/components/task/priority-icon";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -164,7 +163,6 @@ export default function TableViewPage({ params }: { params: Promise<{ workspaceI
           <p className="p-6 text-center text-sm text-muted-foreground">No tasks match these filters.</p>
         )}
       </div>
-      <TaskDetailDialog />
     </>
   );
 }

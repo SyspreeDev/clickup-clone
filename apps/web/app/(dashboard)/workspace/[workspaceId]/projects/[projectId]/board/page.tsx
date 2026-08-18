@@ -4,7 +4,6 @@ import { use, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { TopNav } from "@/components/layout/top-nav";
 import { KanbanBoard } from "@/components/views/kanban-board";
-import { TaskDetailDialog } from "@/components/task/task-detail-dialog";
 import { getProject } from "@/lib/queries/projects";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useProjectTasks } from "@/hooks/use-project-tasks";
@@ -39,7 +38,6 @@ export default function BoardPage({ params }: { params: Promise<{ workspaceId: s
       ) : (
         <KanbanBoard projectId={projectId} projectKey={project.key} workflowStates={project.workflowStates} tasks={filteredTasks} />
       )}
-      <TaskDetailDialog />
     </>
   );
 }

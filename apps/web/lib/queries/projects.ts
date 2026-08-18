@@ -51,7 +51,11 @@ export interface Project {
   isArchived: boolean;
   isPrivate: boolean;
   createdAt: string;
-  team?: { id: string; name: string } | null;
+  team?: {
+    id: string;
+    name: string;
+    members?: Array<{ id: string; userId: string; role: string; user: { id: string; name: string; avatarUrl: string | null } }>;
+  } | null;
   _count?: { tasks: number; members: number };
   workflowStates?: WorkflowState[];
   labels?: Label[];

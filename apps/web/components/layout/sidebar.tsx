@@ -82,7 +82,7 @@ export function Sidebar({ workspaceId }: { workspaceId: string }) {
     { href: base, icon: LayoutDashboard, label: "Dashboard" },
     { href: `${base}/my-tasks`, icon: CheckSquare, label: "My Tasks" },
     { href: `${base}/clients`, icon: Building2, label: "Clients" },
-    { href: `${base}/teams`, icon: Users2, label: "Spaces" },
+    { href: `${base}/teams`, icon: Users2, label: "Teams" },
     { href: `${base}/chat`, icon: MessagesSquare, label: "Chat" },
     { href: `${base}/meetings`, icon: CalendarClock, label: "Meetings" },
     ...(isAdmin ? [{ href: `${base}/admin`, icon: ShieldCheck, label: "Admin" }] : []),
@@ -121,7 +121,7 @@ export function Sidebar({ workspaceId }: { workspaceId: string }) {
 
         <div>
           <div className="flex items-center justify-between px-2.5 py-1">
-            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Spaces</span>
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Teams</span>
             <button
               onClick={() => router.push(`${base}/projects/new`)}
               className="rounded p-0.5 text-muted-foreground hover:bg-sidebar-border/60 hover:text-sidebar-foreground"

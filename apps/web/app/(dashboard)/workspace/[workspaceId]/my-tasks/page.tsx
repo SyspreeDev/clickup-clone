@@ -4,7 +4,6 @@ import { use } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { TopNav } from "@/components/layout/top-nav";
 import { TaskRow } from "@/components/task/task-row";
-import { TaskDetailDialog } from "@/components/task/task-detail-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { listMyTasks } from "@/lib/queries/tasks";
 import { CheckSquare } from "lucide-react";
@@ -38,7 +37,6 @@ export default function MyTasksPage({ params }: { params: Promise<{ workspaceId:
           <TaskRow key={task.id} task={task} projectKey="" />
         ))}
       </div>
-      <TaskDetailDialog />
     </>
   );
 }

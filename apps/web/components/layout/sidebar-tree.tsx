@@ -19,6 +19,16 @@ import { deleteTeam } from "@/lib/queries/teams";
 import { ApiError } from "@/lib/api-client";
 import type { TreeFolder, TreeList, TreeSpace } from "@/lib/queries/hierarchy";
 
+/** Small pill for a list/folder/team's item count — reads as a count, not a stray number floating next to the name. */
+function CountBadge({ count }: { count: number }) {
+  if (!count) return null;
+  return (
+    <span className="shrink-0 rounded-full bg-sidebar-border/70 px-1.5 py-[1px] text-[10px] font-medium tabular-nums text-sidebar-foreground/70">
+      {count}
+    </span>
+  );
+}
+
 /** One list row — the leaf of Space → Folder → List. */
 function ListRow({
   list,
@@ -64,9 +74,7 @@ function ListRow({
         <Hash className="h-3.5 w-3.5 shrink-0" style={{ color: list.color ?? undefined }} />
         <span className="truncate">{list.name}</span>
       </Link>
-      {list._count.tasks > 0 && (
-        <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">{list._count.tasks}</span>
-      )}
+      <CountBadge count={list._count.tasks} />
       <DropdownMenu>
         <DropdownMenuTrigger
           className="shrink-0 rounded p-1 text-muted-foreground opacity-0 hover:bg-sidebar-border hover:text-sidebar-foreground group-hover/row:opacity-100"
@@ -143,16 +151,17 @@ function FolderRow({
           className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5 text-sm text-sidebar-foreground/80 hover:text-sidebar-foreground"
           title={folder.name}
         >
-          {open ? (
-            <FolderOpen className="h-3.5 w-3.5 shrink-0" style={{ color: folder.color ?? undefined }} />
-          ) : (
-            <Folder className="h-3.5 w-3.5 shrink-0" style={{ color: folder.color ?? undefined }} />
-          )}
+          <span
+            className="flex h-4 w-4 shrink-0 items-center justify-center rounded"
+            style={{ backgroundColor: `${folder.color ?? "#94a3b8"}22`, color: folder.color ?? "#94a3b8" }}
+          >
+            {open ? <FolderOpen className="h-2.5 w-2.5" /> : <Folder className="h-2.5 w-2.5" />}
+          </span>
           <span className="truncate">{folder.name}</span>
           {folder.isPrivate && <Lock className="h-3 w-3 shrink-0 text-muted-foreground" />}
         </Link>
         <NewListButton workspaceId={workspaceId} teamId={spaceId} folderId={folder.id} label="New list in folder" />
-        <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">{folder.lists.length || ""}</span>
+        <CountBadge count={folder.lists.length} />
         <DropdownMenu>
           <DropdownMenuTrigger
             className="shrink-0 rounded p-1 text-muted-foreground opacity-0 hover:bg-sidebar-border hover:text-sidebar-foreground group-hover/row:opacity-100"
@@ -167,7 +176,7 @@ function FolderRow({
               onClick={() => {
                 if (
                   window.confirm(
-                    `Delete folder "${folder.name}"? Its ${folder.lists.length} list(s) are NOT deleted — they move directly into the space. This cannot be undone.`,
+                    `Delete folder "${folder.name}"? Its ${folder.lists.length} list(s) are NOT deleted — they move directly into the team. This cannot be undone.`,
                   )
                 ) {
                   deleteMutation.mutate();
@@ -234,7 +243,7 @@ function SpaceRow({
         <button
           onClick={() => setOpen((v) => !v)}
           className="shrink-0 pl-2 text-sidebar-foreground"
-          aria-label={open ? "Collapse space" : "Expand space"}
+          aria-label={open ? "Collapse team" : "Expand team"}
           aria-expanded={open}
         >
           {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
@@ -242,19 +251,19 @@ function SpaceRow({
         <Link
           href={`${base}/space/${space.id}`}
           onClick={onNavigate}
-          className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5 text-sm font-semibold text-sidebar-foreground"
+          className="flex min-w-0 flex-1 items-center gap-2 py-2 text-sm font-semibold text-sidebar-foreground"
           title={space.name}
         >
           <span
-            className="flex h-4 w-4 shrink-0 items-center justify-center rounded"
+            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md"
             style={{ backgroundColor: `${space.color ?? "#f59e0b"}22`, color: space.color ?? "#f59e0b" }}
           >
-            <Layers className="h-2.5 w-2.5" />
+            <Layers className="h-3 w-3" />
           </span>
           <span className="truncate">{space.name}</span>
         </Link>
-        <NewListButton workspaceId={workspaceId} teamId={space.id} label="New list in space" />
-        <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">{listCount || ""}</span>
+        <NewListButton workspaceId={workspaceId} teamId={space.id} label="New list in team" />
+        <CountBadge count={listCount} />
         <DropdownMenu>
           <DropdownMenuTrigger
             className="shrink-0 rounded p-1 text-muted-foreground opacity-0 hover:bg-sidebar-border hover:text-sidebar-foreground group-hover/row:opacity-100"
@@ -274,7 +283,7 @@ function SpaceRow({
               onClick={() => {
                 if (
                   window.confirm(
-                    `Delete space "${space.name}"? Its ${listCount} list(s) are NOT deleted — they become unassigned rather than destroyed. This cannot be undone.`,
+                    `Delete team "${space.name}"? Its ${listCount} list(s) are NOT deleted — they become unassigned rather than destroyed. This cannot be undone.`,
                   )
                 ) {
                   deleteMutation.mutate();
@@ -282,7 +291,7 @@ function SpaceRow({
               }}
             >
               <Trash2 className="h-4 w-4" />
-              Delete space
+              Delete team
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -348,11 +357,11 @@ export function SidebarTree({
   }
 
   if (spaces.length === 0) {
-    return <p className="px-2.5 py-1 text-xs text-muted-foreground">No spaces yet</p>;
+    return <p className="px-2.5 py-1 text-xs text-muted-foreground">No teams yet</p>;
   }
 
   return (
-    <div className="space-y-0.5">
+    <div className="space-y-3">
       {spaces.map((space) => (
         <SpaceRow
           key={space.id}

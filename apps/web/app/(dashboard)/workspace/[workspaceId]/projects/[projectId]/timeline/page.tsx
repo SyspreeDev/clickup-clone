@@ -4,7 +4,6 @@ import { use } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { TopNav } from "@/components/layout/top-nav";
 import { TimelineView } from "@/components/views/timeline-view";
-import { TaskDetailDialog } from "@/components/task/task-detail-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useProjectTasks } from "@/hooks/use-project-tasks";
 import { getProject } from "@/lib/queries/projects";
@@ -24,7 +23,6 @@ export default function TimelineViewPage({ params }: { params: Promise<{ workspa
       ) : (
         <TimelineView tasks={tasks ?? []} projectKey={project.key} />
       )}
-      <TaskDetailDialog />
     </>
   );
 }

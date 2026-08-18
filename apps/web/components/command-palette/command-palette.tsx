@@ -6,6 +6,7 @@ import { Command } from "cmdk";
 import { useQuery } from "@tanstack/react-query";
 import { LayoutDashboard, CheckSquare, Users2, FolderKanban, Plus, FileText, Hash, CalendarClock } from "lucide-react";
 import { useCommandPaletteStore } from "@/stores/command-palette-store";
+import { useTaskDetailStore } from "@/stores/task-detail-store";
 import { listProjects } from "@/lib/queries/projects";
 import { search as searchApi } from "@/lib/queries/search";
 import { cn } from "@/lib/utils";
@@ -15,7 +16,16 @@ export function CommandPalette({ workspaceId }: { workspaceId: string }) {
   const isOpen = useCommandPaletteStore((s) => s.isOpen);
   const open = useCommandPaletteStore((s) => s.open);
   const close = useCommandPaletteStore((s) => s.close);
+  const openTask = useTaskDetailStore((s) => s.openTask);
   const [query, setQuery] = React.useState("");
+  const [debouncedQuery, setDebouncedQuery] = React.useState("");
+
+  // Debounced so typing doesn't fire a search request on every keystroke —
+  // matters most for anyone typing at normal speed on a longer client name.
+  React.useEffect(() => {
+    const id = setTimeout(() => setDebouncedQuery(query), 200);
+    return () => clearTimeout(id);
+  }, [query]);
 
   const { data: projects } = useQuery({
     queryKey: ["projects", workspaceId],
@@ -23,10 +33,10 @@ export function CommandPalette({ workspaceId }: { workspaceId: string }) {
     enabled: isOpen,
   });
 
-  const { data: results } = useQuery({
-    queryKey: ["search", workspaceId, query],
-    queryFn: () => searchApi(workspaceId, query),
-    enabled: isOpen && query.length >= 2,
+  const { data: results, isFetching: searching } = useQuery({
+    queryKey: ["search", workspaceId, debouncedQuery],
+    queryFn: () => searchApi(workspaceId, debouncedQuery),
+    enabled: isOpen && debouncedQuery.length >= 2,
   });
 
   React.useEffect(() => {
@@ -66,10 +76,17 @@ export function CommandPalette({ workspaceId }: { workspaceId: string }) {
           <Command.List className="max-h-96 overflow-y-auto p-2 scrollbar-thin">
             <Command.Empty className="py-6 text-center text-sm text-muted-foreground">No results found.</Command.Empty>
 
-            {query.length >= 2 && !!results?.tasks.length && (
+            {debouncedQuery.length >= 2 && !!results?.tasks.length && (
               <Command.Group heading="Tasks">
                 {results.tasks.map((t) => (
-                  <Item key={t.id} icon={CheckSquare} onSelect={() => go(`${base}/projects/${t.project.id}/list`)}>
+                  <Item
+                    key={t.id}
+                    icon={CheckSquare}
+                    onSelect={() => {
+                      openTask(t.id);
+                      close();
+                    }}
+                  >
                     {t.title}
                     <span className="ml-auto text-xs text-muted-foreground">
                       {t.project.key}-{t.number}
@@ -79,7 +96,7 @@ export function CommandPalette({ workspaceId }: { workspaceId: string }) {
               </Command.Group>
             )}
 
-            {query.length >= 2 && !!results?.projects.length && (
+            {debouncedQuery.length >= 2 && !!results?.projects.length && (
               <Command.Group heading="Projects">
                 {results.projects.map((p) => (
                   <Item key={p.id} icon={FolderKanban} onSelect={() => go(`${base}/projects/${p.id}/list`)}>
@@ -90,7 +107,7 @@ export function CommandPalette({ workspaceId }: { workspaceId: string }) {
               </Command.Group>
             )}
 
-            {query.length >= 2 && !!results?.members.length && (
+            {debouncedQuery.length >= 2 && !!results?.members.length && (
               <Command.Group heading="People">
                 {results.members.map((m) => (
                   <Item key={m.id} icon={Users2} onSelect={() => go(`${base}/settings/members`)}>
@@ -101,7 +118,7 @@ export function CommandPalette({ workspaceId }: { workspaceId: string }) {
               </Command.Group>
             )}
 
-            {query.length >= 2 && !!results?.files.length && (
+            {debouncedQuery.length >= 2 && !!results?.files.length && (
               <Command.Group heading="Files">
                 {results.files.map((f) => (
                   <Item key={f.id} icon={FileText} onSelect={() => go(`${base}/files`)}>
@@ -111,12 +128,12 @@ export function CommandPalette({ workspaceId }: { workspaceId: string }) {
               </Command.Group>
             )}
 
-            {query.length < 2 && (
+            {debouncedQuery.length < 2 && (
               <>
                 <Command.Group heading="Navigate">
                   <Item icon={LayoutDashboard} onSelect={() => go(base)}>Dashboard</Item>
                   <Item icon={CheckSquare} onSelect={() => go(`${base}/my-tasks`)}>My Tasks</Item>
-                  <Item icon={Users2} onSelect={() => go(`${base}/teams`)}>Spaces</Item>
+                  <Item icon={Users2} onSelect={() => go(`${base}/teams`)}>Teams</Item>
                   <Item icon={Hash} onSelect={() => go(`${base}/chat`)}>Chat</Item>
                   <Item icon={CalendarClock} onSelect={() => go(`${base}/meetings`)}>Meetings</Item>
                 </Command.Group>
@@ -127,7 +144,7 @@ export function CommandPalette({ workspaceId }: { workspaceId: string }) {
               </>
             )}
 
-            {query.length < 2 && !!projects?.length && (
+            {debouncedQuery.length < 2 && !!projects?.length && (
               <Command.Group heading="Projects">
                 {projects.map((p) => (
                   <Item key={p.id} icon={FolderKanban} onSelect={() => go(`${base}/projects/${p.id}/list`)}>
