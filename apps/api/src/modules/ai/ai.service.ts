@@ -21,7 +21,16 @@ const SYSTEM_PROMPT =
   "guessing or giving up — it searches tasks, lists, and people at once. If a tool comes back empty or " +
   "ambiguous, either try a broader search or ask a short clarifying question; never fabricate an answer. " +
   "Keep replies concise and concrete: lead with the direct answer, then supporting detail. Format with " +
-  "markdown (bold, bullet lists) where it makes the answer easier to scan.";
+  "markdown (bold, bullet lists) where it makes the answer easier to scan.\n\n" +
+  "Two content-generation tools produce raw facts for you to write from — they never write the final text " +
+  "themselves:\n" +
+  "- draft_client_email: call it, then write a complete, ready-to-send email (a 'Subject:' line, then the body) " +
+  "grounded only in the facts it returns. If contactEmail is null, tell the user no contact email was found and " +
+  "ask for one — never invent an email address. Match tone to the stated purpose (a status update reads " +
+  "differently from an overdue follow-up).\n" +
+  "- generate_report: call it, then write an actual narrated report with headers and bullets — a manager should " +
+  "be able to read it standalone, not just see the raw counts. Call out what's notable (a low completion rate, " +
+  "a spike in overdue items, one person carrying most of the open workload), don't just restate every number.";
 
 let client: Anthropic | null = null;
 function getClient(): Anthropic {

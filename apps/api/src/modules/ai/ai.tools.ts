@@ -83,6 +83,46 @@ export const AI_TOOLS = [
       },
     },
   },
+  {
+    name: "draft_client_email",
+    description:
+      "Get everything needed to draft a real email to a client — pulls their contact email, sales person, package, " +
+      "and scope out of the client's brief (stored in their task description), plus current status and how overdue " +
+      "they are. This tool only GATHERS the facts; you write the actual email yourself in your response using them. " +
+      "If contactEmail comes back null, say so and ask the user for it rather than guessing one.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        clientName: { type: "string", description: "The client's name (i.e. the task title)." },
+        purpose: {
+          type: "string",
+          description: "What the email is for, e.g. 'status update', 'overdue follow-up', 'project kickoff', 'general check-in'.",
+        },
+      },
+      required: ["clientName"],
+    },
+  },
+  {
+    name: "generate_report",
+    description:
+      "Generate a work/status report — task breakdown by status and priority, how many tasks were completed in the " +
+      "recent period, overdue count, and top open workloads by assignee — for one list/team by name, or across " +
+      "everything the user has access to. Use this for 'work report', 'status report', or 'how's the team doing' " +
+      "style requests. This tool only gathers the numbers; write the report narrative yourself.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        scope: {
+          type: "string",
+          description: "Name (or partial name) of the list/project or team/space to report on. Omit for everything the user has access to.",
+        },
+        periodDays: {
+          type: "integer",
+          description: "How many recent days to count completions over. Defaults to 7.",
+        },
+      },
+    },
+  },
 ];
 
 type ToolContext = { userId: string; workspaceId: string };
@@ -348,6 +388,107 @@ export async function getTaskDetails(ctx: ToolContext, input: { taskTitle?: stri
   };
 }
 
+/** Pulls a "Label - value" line out of a client brief, e.g. "Client Email - foo@bar.com". */
+function extractBriefField(text: string, label: string): string | null {
+  const match = text.match(new RegExp(`${label}\\s*[-:]\\s*(.+)`, "i"));
+  return match ? match[1].trim() : null;
+}
+
+function extractEmailAddress(text: string): string | null {
+  const labeled = extractBriefField(text, "Client Email");
+  const candidate = labeled ?? text.match(/[\w.+-]+@[\w-]+\.[a-zA-Z]{2,}/)?.[0];
+  return candidate?.match(/^[\w.+-]+@[\w-]+\.[a-zA-Z]{2,}$/) ? candidate : null;
+}
+
+export async function draftClientEmail(ctx: ToolContext, input: { clientName?: string; purpose?: string }) {
+  const clientName = input.clientName?.trim();
+  if (!clientName) return { error: "Give me a client name to draft an email for." };
+
+  const details = await getTaskDetails(ctx, { taskTitle: clientName });
+  if ("error" in details || "ambiguous" in details) return details;
+
+  const brief = details.description;
+  const daysOverdue =
+    details.dueDate && details.isOpen && new Date(details.dueDate) < new Date()
+      ? Math.floor((Date.now() - new Date(details.dueDate).getTime()) / 86_400_000)
+      : 0;
+  const contactEmail = extractEmailAddress(brief);
+
+  return {
+    clientName: details.title,
+    project: details.project,
+    purpose: input.purpose ?? "general update",
+    status: details.status,
+    isOpen: details.isOpen,
+    dueDate: details.dueDate,
+    daysOverdue,
+    checklistProgress: details.checklistProgress,
+    contactEmail,
+    salesPerson: extractBriefField(brief, "Sales person"),
+    package: extractBriefField(brief, "Package"),
+    sow: extractBriefField(brief, "SOW"),
+    fullBrief: brief,
+    note: contactEmail ? undefined : "No contact email was found in this client's brief — ask the user for it before drafting anything they intend to send.",
+  };
+}
+
+export async function generateReport(ctx: ToolContext, input: { scope?: string; periodDays?: number }) {
+  const resolved = await resolveScopedProjectIds(ctx, input.scope);
+  if ("error" in resolved) return resolved;
+  const { projectIds, matchedName } = resolved;
+  const scopeLabel = matchedName ?? `${projectIds.length} list(s) across the workspace`;
+  if (projectIds.length === 0) return { scope: scopeLabel, message: "No lists found in this scope." };
+
+  const periodDays = Math.min(Math.max(input.periodDays ?? 7, 1), 90);
+  const since = new Date(Date.now() - periodDays * 86_400_000);
+  const where = { projectId: { in: projectIds }, isArchived: false } as const;
+
+  const [tasks, completedInPeriod] = await Promise.all([
+    prisma.task.findMany({
+      where,
+      select: {
+        priority: true,
+        workflowState: { select: { category: true } },
+        assignees: { select: { user: { select: { name: true } } } },
+      },
+    }),
+    prisma.task.count({ where: { ...where, completedAt: { gte: since } } }),
+  ]);
+
+  const byStatus = { BACKLOG: 0, UNSTARTED: 0, STARTED: 0, COMPLETED: 0, CANCELLED: 0 };
+  const byPriority = { NO_PRIORITY: 0, LOW: 0, MEDIUM: 0, HIGH: 0, URGENT: 0 };
+  const workload = new Map<string, number>();
+
+  for (const t of tasks) {
+    byStatus[t.workflowState.category] += 1;
+    byPriority[t.priority] += 1;
+    if (t.workflowState.category === "COMPLETED" || t.workflowState.category === "CANCELLED") continue;
+    for (const a of t.assignees) workload.set(a.user.name, (workload.get(a.user.name) ?? 0) + 1);
+  }
+
+  const totalTasks = tasks.length;
+  const completedTasks = byStatus.COMPLETED;
+  const overdueTasks = await prisma.task.count({
+    where: { ...where, dueDate: { lt: new Date() }, workflowState: { category: { notIn: ["COMPLETED", "CANCELLED"] } } },
+  });
+
+  return {
+    scope: scopeLabel,
+    periodDays,
+    totalTasks,
+    completedTasks,
+    completionRate: totalTasks ? Math.round((completedTasks / totalTasks) * 100) : 0,
+    overdueTasks,
+    completedInPeriod,
+    byStatus,
+    byPriority,
+    topOpenWorkload: [...workload.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([name, openTasks]) => ({ name, openTasks })),
+  };
+}
+
 export async function runTool(name: string, ctx: ToolContext, input: Record<string, unknown>) {
   switch (name) {
     case "search_workspace":
@@ -358,6 +499,10 @@ export async function runTool(name: string, ctx: ToolContext, input: Record<stri
       return getProjectStats(ctx, input as { projectName?: string });
     case "search_overdue_tasks":
       return searchOverdueTasks(ctx, input as { projectName?: string; limit?: number });
+    case "draft_client_email":
+      return draftClientEmail(ctx, input as { clientName?: string; purpose?: string });
+    case "generate_report":
+      return generateReport(ctx, input as { scope?: string; periodDays?: number });
     default:
       return { error: `Unknown tool: ${name}` };
   }
