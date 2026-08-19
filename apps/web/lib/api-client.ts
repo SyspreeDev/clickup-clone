@@ -133,6 +133,58 @@ export async function apiDownload(path: string): Promise<Blob> {
   return res.blob();
 }
 
+/**
+ * For Server-Sent Events over POST (EventSource only supports GET). Reads the
+ * response body as a stream, splits it into `data: {...}` frames, and invokes
+ * `onEvent` with each parsed JSON payload as it arrives — this is what makes
+ * the AI chat feel live instead of waiting for the whole reply.
+ */
+export async function apiStream<E = unknown>(path: string, body: unknown, onEvent: (event: E) => void): Promise<void> {
+  const accessToken = useAuthStore.getState().accessToken;
+
+  const doFetch = (token: string | null) =>
+    fetch(`${API_URL}${path}`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(body),
+    });
+
+  let res = await doFetch(accessToken);
+
+  if (res.status === 401) {
+    const newToken = await refreshAccessToken();
+    if (newToken) res = await doFetch(newToken);
+  }
+
+  if (!res.ok || !res.body) {
+    const isJson = res.headers.get("content-type")?.includes("application/json");
+    const data = isJson ? await res.json() : undefined;
+    throw new ApiError(res.status, data?.error?.message ?? res.statusText, data?.error?.code);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    const frames = buffer.split("\n\n");
+    buffer = frames.pop() ?? "";
+    for (const frame of frames) {
+      const line = frame.trim();
+      if (!line.startsWith("data: ")) continue;
+      onEvent(JSON.parse(line.slice("data: ".length)) as E);
+    }
+  }
+}
+
 export const api = {
   get: <T>(path: string, options?: RequestOptions) => apiFetch<T>(path, { ...options, method: "GET" }),
   post: <T>(path: string, body?: unknown, options?: RequestOptions) =>

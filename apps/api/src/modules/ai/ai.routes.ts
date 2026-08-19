@@ -9,10 +9,7 @@ import * as aiService from "./ai.service";
 
 const chatSchema = z.object({
   message: z.string().min(1).max(2000),
-  history: z
-    .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string() }))
-    .max(20)
-    .optional(),
+  conversationId: z.string().optional(),
 });
 
 export const aiRouter: Router = Router();
@@ -26,16 +23,60 @@ aiRouter.get(
   }),
 );
 
+aiRouter.get(
+  "/workspaces/:workspaceId/ai/conversations",
+  requireWorkspaceRole("GUEST"),
+  asyncHandler(async (req, res) => {
+    res.json(await aiService.listConversations({ userId: req.user!.id, workspaceId: req.params.workspaceId }));
+  }),
+);
+
+aiRouter.get(
+  "/workspaces/:workspaceId/ai/conversations/:conversationId",
+  requireWorkspaceRole("GUEST"),
+  asyncHandler(async (req, res) => {
+    const messages = await aiService.getConversationMessages(
+      { userId: req.user!.id, workspaceId: req.params.workspaceId },
+      req.params.conversationId,
+    );
+    res.json(messages);
+  }),
+);
+
+aiRouter.delete(
+  "/workspaces/:workspaceId/ai/conversations/:conversationId",
+  requireWorkspaceRole("GUEST"),
+  asyncHandler(async (req, res) => {
+    await aiService.deleteConversation({ userId: req.user!.id, workspaceId: req.params.workspaceId }, req.params.conversationId);
+    res.status(204).send();
+  }),
+);
+
+// Server-Sent Events — the frontend reads this with a manual fetch + stream
+// reader (not EventSource, since this is a POST with a body). Errors that
+// happen *after* headers are sent are written as an `error` event rather than
+// passed to the global error handler, which can no longer set the status code.
 aiRouter.post(
   "/workspaces/:workspaceId/ai/chat",
   requireWorkspaceRole("GUEST"),
   validateBody(chatSchema),
   asyncHandler(async (req, res) => {
-    const result = await aiService.chat(
-      { userId: req.user!.id, workspaceId: req.params.workspaceId },
-      req.body.message,
-      req.body.history ?? [],
-    );
-    res.json(result);
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Connection", "keep-alive");
+    res.flushHeaders();
+
+    try {
+      for await (const event of aiService.streamChat(
+        { userId: req.user!.id, workspaceId: req.params.workspaceId },
+        req.body,
+      )) {
+        res.write(`data: ${JSON.stringify(event)}\n\n`);
+      }
+    } catch (err) {
+      res.write(`data: ${JSON.stringify({ type: "error", message: err instanceof Error ? err.message : "Something went wrong." })}\n\n`);
+    } finally {
+      res.end();
+    }
   }),
 );

@@ -157,6 +157,7 @@ model User {
   docsCreated             Doc[]             @relation("DocCreatedBy")
   filePermissions         FilePermission[]
   checklistItemsAssigned  ChecklistItem[]
+  aiConversations         AiConversation[]
 
   @@index([email])
 }
@@ -234,6 +235,7 @@ model Workspace {
   files          File[]
   projectFolders ProjectFolder[]
   docs           Doc[]
+  aiConversations AiConversation[]
 
   @@index([slug])
 }
@@ -861,4 +863,40 @@ model ApiToken {
   createdAt  DateTime  @default(now())
 
   @@index([userId])
+}
+
+// ─────────────────────────────── AI ASSISTANT ───────────────────────────────
+
+/// A saved AI chat, scoped to one user — other members never see each other's
+/// conversations even though the AI itself reads workspace-wide (access-filtered) data.
+model AiConversation {
+  id          String   @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String    @default("New chat")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  messages AiMessage[]
+
+  @@index([workspaceId, userId, updatedAt])
+}
+
+model AiMessage {
+  id             String         @id @default(cuid())
+  conversationId String
+  conversation   AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           AiMessageRole
+  content        String         @db.Text
+  toolsUsed      String[]       @default([])
+  createdAt      DateTime       @default(now())
+
+  @@index([conversationId, createdAt])
+}
+
+enum AiMessageRole {
+  USER
+  ASSISTANT
 }
