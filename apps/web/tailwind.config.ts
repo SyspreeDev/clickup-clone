@@ -71,11 +71,11 @@ const config: Config = {
         "soft-lg":
           "inset 0 1px 0 0 rgb(255 255 255 / 0.06), 0 2px 8px 0 rgb(0 0 0 / 0.08), 0 8px 24px -4px rgb(0 0 0 / 0.12)",
         glow: "inset 0 1px 0 0 rgb(255 255 255 / 0.06), 0 0 0 1px hsl(var(--primary) / 0.15), 0 4px 20px -2px hsl(var(--primary) / 0.25)",
-        /* Layered ambient shadow + a faint primary-tinted halo — for cards that
-           should feel "lifted" rather than merely bordered (hero panels, the
-           AI assistant card, hover states). */
+        /* Neutral ambient depth only — no colored halo. A glow reads as a toy;
+           plain elevation reads as sophisticated. For hero panels and cards
+           that should feel "lifted" rather than merely bordered. */
         premium:
-          "inset 0 1px 0 0 rgb(255 255 255 / 0.07), 0 1px 1px 0 rgb(0 0 0 / 0.16), 0 16px 40px -10px rgb(0 0 0 / 0.45), 0 0 0 1px hsl(var(--border) / 0.7), 0 0 50px -14px hsl(var(--primary) / 0.25)",
+          "inset 0 1px 0 0 rgb(255 255 255 / 0.06), 0 1px 1px 0 rgb(0 0 0 / 0.16), 0 16px 40px -10px rgb(0 0 0 / 0.45), 0 0 0 1px hsl(var(--border) / 0.7)",
       },
       keyframes: {
         "accordion-down": { from: { height: "0" }, to: { height: "var(--radix-accordion-content-height)" } },

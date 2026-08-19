@@ -198,38 +198,33 @@ export default function WorkspaceDashboardPage({ params }: { params: Promise<{ w
               </CardHeader>
               <CardContent className="grid grid-cols-2 gap-2.5">
                 {[
-                  {
-                    label: "New task",
-                    icon: Plus,
-                    onClick: () => openPalette(),
-                    accent: "bg-gradient-to-br from-primary to-primary/70 text-primary-foreground shadow-[0_3px_10px_-2px_hsl(var(--primary)/0.55)]",
-                  },
+                  { label: "New task", icon: Plus, onClick: () => openPalette(), accent: "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground" },
                   {
                     label: "New project",
                     icon: FolderKanban,
                     href: `${base}/projects/new`,
-                    accent: "bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-[0_3px_10px_-2px_rgb(59_130_246/0.55)]",
+                    accent: "bg-gradient-to-br from-blue-500 to-blue-600 text-white",
                   },
                   {
                     label: "Invite team",
                     icon: Users2,
                     href: `${base}/teams`,
-                    accent: "bg-gradient-to-br from-success to-success/70 text-success-foreground shadow-[0_3px_10px_-2px_hsl(var(--success)/0.55)]",
+                    accent: "bg-gradient-to-br from-success to-success/80 text-success-foreground",
                   },
                   {
                     label: "Schedule meeting",
                     icon: CalendarClock,
                     href: `${base}/meetings`,
-                    accent: "bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-[0_3px_10px_-2px_rgb(217_119_6/0.55)]",
+                    accent: "bg-gradient-to-br from-amber-400 to-amber-600 text-white",
                   },
                 ].map((action) => {
                   const inner = (
                     <Button
                       variant="secondary"
-                      className="h-auto w-full flex-col gap-2 rounded-2xl py-4 transition-transform hover:-translate-y-0.5"
+                      className="h-auto w-full flex-col gap-2 rounded-xl py-4 transition-transform hover:-translate-y-0.5"
                       onClick={action.onClick}
                     >
-                      <span className={cn("flex h-9 w-9 items-center justify-center rounded-full", action.accent)}>
+                      <span className={cn("flex h-8 w-8 items-center justify-center rounded-lg", action.accent)}>
                         <action.icon className="h-4 w-4" />
                       </span>
                       <span className="text-xs">{action.label}</span>

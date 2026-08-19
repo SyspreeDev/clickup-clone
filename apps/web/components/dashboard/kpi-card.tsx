@@ -23,21 +23,14 @@ export function KpiCard({
   hint?: string;
   href?: string;
 }) {
-  // Solid-ish gradient chips (not faint tints) with a foreground-colored icon —
-  // this is what reads as "rich" rather than merely "dark mode with a hint of color".
+  // Small, quiet rounded-square chips — a flat-ish gradient and a restrained
+  // shadow read as sophisticated; a glow ring reads as a toy. Match the icon
+  // treatment to plain product UI (Linear/Vercel-style), not a marketing site.
   const accentClass = {
-    primary: "bg-gradient-to-br from-primary to-primary/70 text-primary-foreground shadow-[0_4px_14px_-2px_hsl(var(--primary)/0.5)]",
-    success: "bg-gradient-to-br from-success to-success/70 text-success-foreground shadow-[0_4px_14px_-2px_hsl(var(--success)/0.5)]",
-    destructive:
-      "bg-gradient-to-br from-destructive to-destructive/70 text-destructive-foreground shadow-[0_4px_14px_-2px_hsl(var(--destructive)/0.5)]",
-    muted: "bg-gradient-to-br from-muted-foreground/40 to-muted-foreground/20 text-foreground",
-  }[accent ?? "primary"];
-
-  const ringClass = {
-    primary: "group-hover:ring-primary/20",
-    success: "group-hover:ring-success/20",
-    destructive: "group-hover:ring-destructive/20",
-    muted: "group-hover:ring-muted-foreground/15",
+    primary: "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground",
+    success: "bg-gradient-to-br from-success to-success/80 text-success-foreground",
+    destructive: "bg-gradient-to-br from-destructive to-destructive/80 text-destructive-foreground",
+    muted: "bg-muted text-muted-foreground",
   }[accent ?? "primary"];
 
   const content = (
@@ -47,8 +40,7 @@ export function KpiCard({
       transition={{ duration: 0.25, delay: index * 0.05, ease: "easeOut" }}
       whileHover={{ y: -2 }}
       className={cn(
-        "group rounded-2xl border border-border bg-card p-5 shadow-soft ring-1 ring-transparent transition-all hover:shadow-premium",
-        ringClass,
+        "group rounded-2xl border border-border bg-card p-5 shadow-soft transition-all hover:shadow-soft-lg",
         href && "cursor-pointer",
       )}
     >
@@ -61,8 +53,8 @@ export function KpiCard({
             </span>
           )}
         </span>
-        <span className={cn("flex h-10 w-10 items-center justify-center rounded-full transition-transform group-hover:scale-105", accentClass)}>
-          <Icon className="h-[18px] w-[18px]" />
+        <span className={cn("flex h-9 w-9 items-center justify-center rounded-lg", accentClass)}>
+          <Icon className="h-4 w-4" />
         </span>
       </div>
       <p className="mt-4 text-3xl font-bold tracking-tight">{value}</p>
