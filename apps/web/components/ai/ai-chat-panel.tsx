@@ -2,7 +2,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Sparkles, Send, User as UserIcon, AlertTriangle, Wrench } from "lucide-react";
+import {
+  Sparkles,
+  Send,
+  User as UserIcon,
+  AlertTriangle,
+  Wrench,
+  FileText,
+  Mail,
+  BarChart3,
+  ShieldAlert,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AiMarkdown } from "@/components/ai/ai-markdown";
@@ -10,10 +20,40 @@ import { getAiStatus, streamAiChat, type AiMessageRecord } from "@/lib/queries/a
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
-const QUICK_PROMPTS = [
-  "How is the workspace doing overall?",
-  "What's overdue right now?",
-  "Give me a summary of the Web Team's lists.",
+/**
+ * Mirrors ClickUp Brain's quick-action row. "send" fires the canned prompt
+ * immediately; "prefill" drops starter text into the composer and focuses it,
+ * since drafting a client email needs a name only the user knows.
+ */
+const QUICK_ACTIONS = [
+  {
+    key: "summary",
+    label: "Project Summary",
+    icon: FileText,
+    mode: "send" as const,
+    prompt: "Give me a summary of progress across everything I have access to.",
+  },
+  {
+    key: "email",
+    label: "Client Email",
+    icon: Mail,
+    mode: "prefill" as const,
+    prefill: "Draft a client email to ",
+  },
+  {
+    key: "report",
+    label: "Work Report",
+    icon: BarChart3,
+    mode: "send" as const,
+    prompt: "Generate a work report for the last 7 days.",
+  },
+  {
+    key: "blockers",
+    label: "Check Blockers",
+    icon: ShieldAlert,
+    mode: "send" as const,
+    prompt: "What's overdue or blocked right now, and what should I prioritize?",
+  },
 ];
 
 interface LocalMessage {
@@ -50,6 +90,7 @@ export function AiChatPanel({
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const conversationIdRef = useRef(initialConversationId);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const { data: status, isLoading: statusLoading } = useQuery({
     queryKey: ["ai-status", workspaceId],
@@ -108,7 +149,42 @@ export function AiChatPanel({
     });
   }
 
+  function runQuickAction(action: (typeof QUICK_ACTIONS)[number]) {
+    if (isStreaming) return;
+    if (action.mode === "send") {
+      send(action.prompt);
+      return;
+    }
+    setInput(action.prefill);
+    // Value changes are async (controlled input), so focus/cursor placement
+    // has to wait a tick for the DOM to actually have the new text.
+    requestAnimationFrame(() => {
+      const el = textareaRef.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(el.value.length, el.value.length);
+    });
+  }
+
   const notConfigured = status?.configured === false;
+
+  const quickActionsRow = (
+    <div className="flex flex-wrap gap-1.5">
+      {QUICK_ACTIONS.map((action) => (
+        <Button
+          key={action.key}
+          variant="outline"
+          size="sm"
+          disabled={isStreaming || notConfigured}
+          onClick={() => runQuickAction(action)}
+          className="gap-1.5 text-xs"
+        >
+          <action.icon className="h-3.5 w-3.5" />
+          {action.label}
+        </Button>
+      ))}
+    </div>
+  );
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
@@ -132,10 +208,18 @@ export function AiChatPanel({
                 I can look up clients, tasks, and lists, and summarize progress across anything you have access to.
               </p>
             </div>
-            <div className="flex flex-col gap-1.5">
-              {QUICK_PROMPTS.map((p) => (
-                <Button key={p} variant="outline" size="sm" onClick={() => send(p)}>
-                  {p}
+            <div className="flex flex-wrap justify-center gap-1.5">
+              {QUICK_ACTIONS.map((action) => (
+                <Button
+                  key={action.key}
+                  variant="outline"
+                  size="sm"
+                  disabled={isStreaming}
+                  onClick={() => runQuickAction(action)}
+                  className="gap-1.5"
+                >
+                  <action.icon className="h-3.5 w-3.5" />
+                  {action.label}
                 </Button>
               ))}
             </div>
@@ -190,6 +274,8 @@ export function AiChatPanel({
       </div>
 
       <div className="border-t border-border p-3">
+        {/* Only shown once a conversation is underway — the empty state has its own, larger version of this row. */}
+        {messages.length > 0 && !notConfigured && <div className="mb-2">{quickActionsRow}</div>}
         <form
           className="flex items-end gap-2"
           onSubmit={(e) => {
@@ -198,6 +284,7 @@ export function AiChatPanel({
           }}
         >
           <textarea
+            ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
@@ -230,6 +317,10 @@ function toolLabel(name: string): string {
       return "Crunching project stats…";
     case "search_overdue_tasks":
       return "Checking overdue tasks…";
+    case "draft_client_email":
+      return "Pulling up the client brief…";
+    case "generate_report":
+      return "Building the report…";
     default:
       return `Using ${name}…`;
   }
