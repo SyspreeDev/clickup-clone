@@ -12,6 +12,7 @@ import {
   CalendarClock,
   Settings,
   ShieldCheck,
+  Sparkles,
   Plus,
   ChevronRight,
   LogOut,
@@ -81,6 +82,7 @@ export function Sidebar({ workspaceId }: { workspaceId: string }) {
   const nav = [
     { href: base, icon: LayoutDashboard, label: "Dashboard" },
     { href: `${base}/my-tasks`, icon: CheckSquare, label: "My Tasks" },
+    { href: `${base}/ai`, icon: Sparkles, label: "AI" },
     { href: `${base}/clients`, icon: Building2, label: "Clients" },
     { href: `${base}/teams`, icon: Users2, label: "Teams" },
     { href: `${base}/chat`, icon: MessagesSquare, label: "Chat" },

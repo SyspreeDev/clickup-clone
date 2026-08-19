@@ -18,6 +18,7 @@ import { searchRouter } from "./modules/search/search.routes";
 import { reportRouter } from "./modules/reports/report.routes";
 import { userRouter } from "./modules/users/user.routes";
 import { meetingRouter } from "./modules/meetings/meeting.routes";
+import { aiRouter } from "./modules/ai/ai.routes";
 
 configureGoogleStrategy();
 
@@ -48,6 +49,7 @@ app.use("/api", searchRouter);
 app.use("/api", reportRouter);
 app.use("/api", userRouter);
 app.use("/api", meetingRouter);
+app.use("/api", aiRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

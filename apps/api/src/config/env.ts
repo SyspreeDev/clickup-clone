@@ -33,6 +33,8 @@ export const env = {
   zoomClientId: process.env.ZOOM_CLIENT_ID || undefined,
   zoomClientSecret: process.env.ZOOM_CLIENT_SECRET || undefined,
 
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY || undefined,
+
   storageProvider: process.env.STORAGE_PROVIDER ?? "local",
   uploadDir: process.env.UPLOAD_DIR ?? "./uploads",
 
@@ -63,3 +65,5 @@ export const isZoomConfigured = Boolean(
 export const isR2Configured = Boolean(
   env.r2AccountId && env.r2AccessKeyId && env.r2SecretAccessKey && env.r2Bucket,
 );
+
+export const isAiConfigured = Boolean(env.anthropicApiKey);
