@@ -8,7 +8,6 @@ import { cn } from "@/lib/utils";
 export function KpiCard({
   label,
   value,
-  icon: Icon,
   accent,
   index = 0,
   hint,
@@ -16,21 +15,22 @@ export function KpiCard({
 }: {
   label: string;
   value: number | string;
-  icon: React.ComponentType<{ className?: string }>;
+  /** No longer rendered — kept optional so existing call sites don't need to change. */
+  icon?: React.ComponentType<{ className?: string }>;
   accent?: "primary" | "success" | "destructive" | "muted";
   index?: number;
   /** Plain-language explanation of what this number means — shown on hover so the card is self-explanatory. */
   hint?: string;
   href?: string;
 }) {
-  // Small, quiet rounded-square chips — a flat-ish gradient and a restrained
-  // shadow read as sophisticated; a glow ring reads as a toy. Match the icon
-  // treatment to plain product UI (Linear/Vercel-style), not a marketing site.
-  const accentClass = {
-    primary: "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground",
-    success: "bg-gradient-to-br from-success to-success/80 text-success-foreground",
-    destructive: "bg-gradient-to-br from-destructive to-destructive/80 text-destructive-foreground",
-    muted: "bg-muted text-muted-foreground",
+  // No icon, no colored box — just the label, the number, and a plain color
+  // cue (a small dot, the way a status light works) for at-a-glance meaning.
+  // This is what actually reads as clean: quiet cards, color used sparingly.
+  const dotClass = {
+    primary: "bg-primary",
+    success: "bg-success",
+    destructive: "bg-destructive",
+    muted: "bg-muted-foreground/40",
   }[accent ?? "primary"];
 
   const content = (
@@ -53,11 +53,9 @@ export function KpiCard({
             </span>
           )}
         </span>
-        <span className={cn("flex h-9 w-9 items-center justify-center rounded-lg", accentClass)}>
-          <Icon className="h-4 w-4" />
-        </span>
+        <span className={cn("h-2 w-2 shrink-0 rounded-full", dotClass)} />
       </div>
-      <p className="mt-4 text-3xl font-bold tracking-tight">{value}</p>
+      <p className="mt-3 text-3xl font-bold tracking-tight">{value}</p>
     </motion.div>
   );
 
