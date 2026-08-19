@@ -49,8 +49,10 @@ function NavLink({
     <Link
       href={href}
       className={cn(
-        "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors",
-        active ? "bg-primary/10 text-primary" : "text-sidebar-foreground/80 hover:bg-sidebar-border/60 hover:text-sidebar-foreground",
+        "flex items-center gap-2.5 rounded-full px-3 py-1.5 text-sm font-medium transition-all",
+        active
+          ? "bg-gradient-to-r from-primary/25 to-primary/5 text-primary shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.3)]"
+          : "text-sidebar-foreground/80 hover:bg-sidebar-border/60 hover:text-sidebar-foreground",
       )}
     >
       <Icon className="h-4 w-4 shrink-0" />

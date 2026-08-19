@@ -22,11 +22,11 @@ export function TopNav({ title }: { title?: string }) {
       <div className="flex flex-1 items-center justify-end gap-1.5 sm:gap-2">
         <button
           onClick={open}
-          className="hidden items-center gap-2 rounded-lg border border-input bg-background px-3 py-1.5 text-sm text-muted-foreground shadow-sm transition-colors hover:bg-accent sm:flex sm:w-full sm:max-w-xs"
+          className="hidden items-center gap-2 rounded-full border border-input bg-background px-4 py-1.5 text-sm text-muted-foreground shadow-sm transition-colors hover:bg-accent sm:flex sm:w-full sm:max-w-xs"
         >
           <Search className="h-3.5 w-3.5" />
           <span className="flex-1 text-left">Search…</span>
-          <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium">⌘K</kbd>
+          <kbd className="rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-medium">⌘K</kbd>
         </button>
         <Button variant="ghost" size="icon" className="sm:hidden" onClick={open} aria-label="Search">
           <Search className="h-4 w-4" />

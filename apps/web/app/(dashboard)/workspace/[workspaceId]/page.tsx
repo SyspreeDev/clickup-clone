@@ -85,13 +85,13 @@ export default function WorkspaceDashboardPage({ params }: { params: Promise<{ w
       <TopNav title="Dashboard" />
       <div className="flex-1 overflow-y-auto scrollbar-thin">
         <div className="mx-auto max-w-6xl space-y-6 p-6">
-          <div className="relative overflow-hidden rounded-2xl border border-border bg-card px-6 py-5">
+          <div className="relative overflow-hidden rounded-2xl border border-border bg-card px-7 py-7 shadow-premium">
             <div
               className="pointer-events-none absolute inset-0"
-              style={{ background: "radial-gradient(circle at 12% 0%, hsl(var(--primary) / 0.14), transparent 55%)" }}
+              style={{ background: "radial-gradient(circle at 12% 0%, hsl(var(--primary) / 0.18), transparent 55%)" }}
             />
-            <div className="relative flex flex-col gap-1">
-              <h2 className="text-xl font-semibold tracking-tight">
+            <div className="relative flex flex-col gap-1.5">
+              <h2 className="text-2xl font-semibold tracking-tight">
                 {greeting()}{firstName ? `, ${firstName}` : ""} 👋
               </h2>
               <p className="text-sm text-muted-foreground">{format(new Date(), "EEEE, MMMM d")} — here&apos;s what&apos;s happening.</p>
@@ -174,7 +174,7 @@ export default function WorkspaceDashboardPage({ params }: { params: Promise<{ w
             </div>
           )}
 
-          <AiInsightsCard />
+          <AiInsightsCard href={`${base}/ai`} />
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <Card className="lg:col-span-2">
@@ -198,18 +198,38 @@ export default function WorkspaceDashboardPage({ params }: { params: Promise<{ w
               </CardHeader>
               <CardContent className="grid grid-cols-2 gap-2.5">
                 {[
-                  { label: "New task", icon: Plus, onClick: () => openPalette(), accent: "bg-primary/10 text-primary" },
-                  { label: "New project", icon: FolderKanban, href: `${base}/projects/new`, accent: "bg-blue-500/10 text-blue-500" },
-                  { label: "Invite team", icon: Users2, href: `${base}/teams`, accent: "bg-success/10 text-success" },
-                  { label: "Schedule meeting", icon: CalendarClock, href: `${base}/meetings`, accent: "bg-amber-500/10 text-amber-500" },
+                  {
+                    label: "New task",
+                    icon: Plus,
+                    onClick: () => openPalette(),
+                    accent: "bg-gradient-to-br from-primary to-primary/70 text-primary-foreground shadow-[0_3px_10px_-2px_hsl(var(--primary)/0.55)]",
+                  },
+                  {
+                    label: "New project",
+                    icon: FolderKanban,
+                    href: `${base}/projects/new`,
+                    accent: "bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-[0_3px_10px_-2px_rgb(59_130_246/0.55)]",
+                  },
+                  {
+                    label: "Invite team",
+                    icon: Users2,
+                    href: `${base}/teams`,
+                    accent: "bg-gradient-to-br from-success to-success/70 text-success-foreground shadow-[0_3px_10px_-2px_hsl(var(--success)/0.55)]",
+                  },
+                  {
+                    label: "Schedule meeting",
+                    icon: CalendarClock,
+                    href: `${base}/meetings`,
+                    accent: "bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-[0_3px_10px_-2px_rgb(217_119_6/0.55)]",
+                  },
                 ].map((action) => {
                   const inner = (
                     <Button
                       variant="secondary"
-                      className="h-auto w-full flex-col gap-2 py-4 transition-transform hover:-translate-y-0.5"
+                      className="h-auto w-full flex-col gap-2 rounded-2xl py-4 transition-transform hover:-translate-y-0.5"
                       onClick={action.onClick}
                     >
-                      <span className={cn("flex h-8 w-8 items-center justify-center rounded-lg", action.accent)}>
+                      <span className={cn("flex h-9 w-9 items-center justify-center rounded-full", action.accent)}>
                         <action.icon className="h-4 w-4" />
                       </span>
                       <span className="text-xs">{action.label}</span>

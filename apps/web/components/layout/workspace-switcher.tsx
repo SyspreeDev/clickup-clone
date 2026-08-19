@@ -21,8 +21,8 @@ export function WorkspaceSwitcher({ currentWorkspaceId }: { currentWorkspaceId: 
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-sidebar-border/60 focus:outline-none">
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground">
+      <DropdownMenuTrigger className="flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left transition-colors hover:bg-sidebar-border/60 focus:outline-none">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/70 text-sm font-semibold text-primary-foreground shadow-[0_3px_10px_-2px_hsl(var(--primary)/0.55)]">
           {current?.name?.[0]?.toUpperCase() ?? "?"}
         </div>
         <div className="min-w-0 flex-1">

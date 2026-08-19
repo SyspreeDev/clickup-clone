@@ -62,9 +62,20 @@ const config: Config = {
         "2xl": "calc(var(--radius) + 12px)",
       },
       boxShadow: {
-        soft: "0 1px 2px 0 rgb(0 0 0 / 0.04), 0 1px 6px -1px rgb(0 0 0 / 0.04), 0 2px 12px -2px rgb(0 0 0 / 0.06)",
-        "soft-lg": "0 2px 8px 0 rgb(0 0 0 / 0.06), 0 8px 24px -4px rgb(0 0 0 / 0.08)",
-        glow: "0 0 0 1px hsl(var(--primary) / 0.15), 0 4px 20px -2px hsl(var(--primary) / 0.25)",
+        // Every card-level shadow carries the same inset top highlight — a thin
+        // line of light along the upper edge, which is what makes a flat-fill
+        // panel read as "glassy"/lit rather than a plain rectangle. Baking it
+        // into the token (rather than layering a second shadow utility at each
+        // call site) means it's guaranteed to compose correctly everywhere.
+        soft: "inset 0 1px 0 0 rgb(255 255 255 / 0.05), 0 1px 2px 0 rgb(0 0 0 / 0.06), 0 1px 6px -1px rgb(0 0 0 / 0.05), 0 2px 12px -2px rgb(0 0 0 / 0.08)",
+        "soft-lg":
+          "inset 0 1px 0 0 rgb(255 255 255 / 0.06), 0 2px 8px 0 rgb(0 0 0 / 0.08), 0 8px 24px -4px rgb(0 0 0 / 0.12)",
+        glow: "inset 0 1px 0 0 rgb(255 255 255 / 0.06), 0 0 0 1px hsl(var(--primary) / 0.15), 0 4px 20px -2px hsl(var(--primary) / 0.25)",
+        /* Layered ambient shadow + a faint primary-tinted halo — for cards that
+           should feel "lifted" rather than merely bordered (hero panels, the
+           AI assistant card, hover states). */
+        premium:
+          "inset 0 1px 0 0 rgb(255 255 255 / 0.07), 0 1px 1px 0 rgb(0 0 0 / 0.16), 0 16px 40px -10px rgb(0 0 0 / 0.45), 0 0 0 1px hsl(var(--border) / 0.7), 0 0 50px -14px hsl(var(--primary) / 0.25)",
       },
       keyframes: {
         "accordion-down": { from: { height: "0" }, to: { height: "var(--radix-accordion-content-height)" } },
